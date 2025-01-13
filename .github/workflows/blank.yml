@@ -1,0 +1,51 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: 
+      - main
+      - develop
+  pull_request:
+    branches: 
+      - main
+      - develop
+
+jobs:
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Frontend klasörü varsa işlemleri çalıştır
+      - name: Check if frontend directory exists
+        run: |
+          if [ -d "frontend" ]; then
+            cd frontend
+            npm install
+            npm run lint
+            npm test
+            npm run build
+          else
+            echo "Frontend directory not found, skipping..."
+          fi
+
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Backend klasörü varsa işlemleri çalıştır
+      - name: Check if backend directory exists
+        run: |
+          if [ -d "backend" ]; then
+            cd backend
+            go mod tidy
+            go test ./...
+            go build -o app
+          else
+            echo "Backend directory not found, skipping..."
+          fi
