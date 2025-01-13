@@ -1,0 +1,87 @@
+name: CI Pipeline
+
+# Workflow'un ne zaman çalışacağını belirtiyoruz
+on:
+  push:
+    branches: 
+      - main
+      - develop
+  pull_request:
+    branches: 
+      - main
+      - develop
+
+jobs:
+  # Frontend (Next.js) için CI işlemleri
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      # Repo'yu klonlama
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Node.js kurulumu (Next.js için)
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      # Bağımlılıkları yükleme
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm install
+
+      # Linter çalıştırma
+      - name: Run Linter
+        run: |
+          cd frontend
+          npm run lint
+
+      # Testleri çalıştırma
+      - name: Run Tests
+        run: |
+          cd frontend
+          npm test
+
+      # Build işlemi
+      - name: Build Application
+        run: |
+          cd frontend
+          npm run build
+
+  # Backend (Go) için CI işlemleri
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    steps:
+      # Repo'yu klonlama
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Go kurulumu
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+
+      # Bağımlılıkları yükleme
+      - name: Install dependencies
+        run: |
+          cd backend
+          go mod tidy
+
+      # Testleri çalıştırma
+      - name: Run Tests
+        run: |
+          cd backend
+          go test ./...
+
+      # Build işlemi
+      - name: Build Backend
+        run: |
+          cd backend
+          go build -o app
