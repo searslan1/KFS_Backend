@@ -1,0 +1,41 @@
+# 🚀 Go Projeleri için .gitignore 🚀
+
+# Go Derleme Dosyaları
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+*.a
+*.o
+
+# Derleme ve Çalışma Klasörleri
+/bin
+/pkg
+/build
+/tmp
+
+# Bağımlılıklar
+vendor/
+
+# Çevresel Değişken Dosyaları
+.env
+.env.local
+.env.production
+.env.development
+
+# IDE ve Editör Dosyaları
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# Log ve Hata Dosyaları
+*.log
+*.test
+debug/
+coverage.out
+
+# Go Modül Dosyaları (Opsiyonel)
+go.sum
