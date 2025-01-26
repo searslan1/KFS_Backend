@@ -168,7 +168,7 @@ configs/config.go içindeki DB ayarlarına ve migration sırasına dikkat edin.
 Pull Request: Testlerin sorunsuz geçmesi, en az bir review gereklidir.
 Issue: Hata veya iyileştirme önerileri için GitHub Issues kullanın.
 Sorumlular:
-DevOps: Şefika https://github.com/searslan1
+DevOps: Şefika
 Backend: Seda, Ekrem, Emin, Berat, Gülay
 Frontend: Mustafa
 Product Owner: Erdal
@@ -178,6 +178,7 @@ Product Owner: Erdal
 (https://github.com/msfcodmsf)
 (https://github.com/)
 (https://github.com/)
+(https://github.com/searslan1)
 (https://github.com/erdalgumuss)
 
  Lisans
