@@ -1,6 +1,6 @@
 package main
 
-import "github.com/alfonso/KFS_Backend/internal"
+import "github.com/searslan1/KFS_Backend/internal"
 
 func main() {
 	internal.StartServer()

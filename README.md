@@ -176,6 +176,7 @@ Product Owner: Erdal
 (https://github.com/beroyzr)
 (https://github.com/gulayyy)
 (https://github.com/msfcodmsf)
+(https://github.com/Sedamrtsy)
 (https://github.com/)
 (https://github.com/)
 (https://github.com/searslan1)

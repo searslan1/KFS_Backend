@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"github.com/alfonso/KFS_Backend/internal/middlewares"
+	"github.com/searslan1/KFS_Backend/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
 )
 
