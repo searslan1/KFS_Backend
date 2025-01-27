@@ -39,7 +39,13 @@ services:
       - .:/app
     env_file:
       - .env
-
+ command: >
+      sh -c "
+      echo 'Waiting for database...' &&
+      sleep 5 &&
+      wait-for-it test-db:5432 --timeout=30 -- &&
+      go test -count=1 -v ./...
+      "
 networks:
   test-net:
     driver: bridge
