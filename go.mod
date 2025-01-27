@@ -1,4 +1,4 @@
-module github.com/searslan1/KFS_Backend
+module KFS_Backend
 
 go 1.22.2
 

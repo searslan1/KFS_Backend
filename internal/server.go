@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/searslan1/KFS_Backend/configs"
-	"github.com/searslan1/KFS_Backend/pkg/logger"
+	"KFS_Backend/configs"
+	"KFS_Backend/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
