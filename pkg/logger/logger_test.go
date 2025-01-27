@@ -1,15 +1,13 @@
 package logger
 
 import (
-	"os"
-
-	"github.com/sirupsen/logrus"
+	"testing"
 )
 
-var Log = logrus.New()
+func TestLogger(t *testing.T) {
+	// logger.InitLogger() çağrısı yapılmalı, ama InitLogger fonksiyonunun
+	// burada yeniden tanımlanmasına gerek yok
+	InitLogger()
 
-func InitLogger() {
-	Log.SetFormatter(&logrus.JSONFormatter{})
-	Log.SetOutput(os.Stdout)
-	Log.SetLevel(logrus.InfoLevel)
+	// Logger kullanımı ile ilgili testler eklenebilir
 }
