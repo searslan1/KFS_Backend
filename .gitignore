@@ -39,3 +39,4 @@ coverage.out
 
 # Go Modül Dosyaları (Opsiyonel)
 go.sum
+go.mod
