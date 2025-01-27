@@ -5,28 +5,27 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"gopkg.in/yaml.v2"
 )
 
 // Config yapısı
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
+	Server   ServerConfig
+	Database DatabaseConfig
 }
 
 // Server yapılandırması
 type ServerConfig struct {
-	Port string `yaml:"port"`
+	Port string
 }
 
 // Database yapılandırması
 type DatabaseConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Name     string `yaml:"name"`
-	SSLMode  string `yaml:"sslmode"`
+	Host     string
+	Port     string
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
 }
 
 // Config verisini yükler
@@ -36,26 +35,19 @@ func LoadConfig() (*Config, error) {
 		log.Println("⚠️  .env dosyası yüklenemedi, varsayılan ayarlar kullanılıyor.")
 	}
 
-	// YAML dosyasını oku
-	file, err := os.ReadFile("configs/config.yaml")
-	if err != nil {
-		return nil, err
+	config := &Config{
+		Server: ServerConfig{
+			Port: os.Getenv("PORT"),
+		},
+		Database: DatabaseConfig{
+			Host:     os.Getenv("DB_HOST"),
+			Port:     os.Getenv("DB_PORT"),
+			User:     os.Getenv("DB_USER"),
+			Password: os.Getenv("DB_PASSWORD"),
+			Name:     os.Getenv("DB_NAME"),
+			SSLMode:  os.Getenv("DB_SSLMODE"),
+		},
 	}
 
-	var config Config
-	err = yaml.Unmarshal(file, &config)
-	if err != nil {
-		return nil, err
-	}
-
-	// Çevresel değişkenleri oku
-	if port := os.Getenv("PORT"); port != "" {
-		config.Server.Port = port
-	}
-
-	if dbUser := os.Getenv("DB_USER"); dbUser != "" {
-		config.Database.User = dbUser
-	}
-
-	return &config, nil
+	return config, nil
 }

@@ -1,6 +1,6 @@
-module github.com/alfonso/KFS_Backend
+module KFS_Backend
 
-go 1.18
+go 1.22.2
 
 require (
 	github.com/gofiber/fiber/v2 v2.52.6

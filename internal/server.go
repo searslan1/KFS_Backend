@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/alfonso/KFS_Backend/configs"
-	"github.com/alfonso/KFS_Backend/pkg/logger"
+	"KFS_Backend/configs"
+	"KFS_Backend/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-// Veritabanı bağlantısı (isteğe bağlı)
+// Veritabanı bağlantısı
 var DB *gorm.DB
 
 // Sunucuyu başlat
@@ -32,18 +32,18 @@ func StartServer() {
 	// Router'ı yükle
 	SetupRouter(app)
 
-	// Veritabanına bağlanmayı DENE, ama başarısız olursa API yine de çalışsın
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+	// ✅ Supabase için SSL bağlantısını ayarla
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
 		config.Database.Host, config.Database.User, config.Database.Password,
-		config.Database.Name, config.Database.Port, config.Database.SSLMode,
+		config.Database.Name, config.Database.Port,
 	)
 
 	var dbErr error
 	DB, dbErr = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if dbErr != nil {
-		logger.Error("⚠️  Veritabanına bağlanılamadı, ancak API çalışmaya devam ediyor...")
+		logger.Error(fmt.Sprintf("⚠️  Supabase veritabanına bağlanılamadı: %v", dbErr))
 	} else {
-		logger.Info("✅ Veritabanına başarıyla bağlandı!")
+		logger.Info("✅ Supabase veritabanına başarıyla bağlandı!")
 	}
 
 	// Sunucuyu çalıştır

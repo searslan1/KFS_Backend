@@ -7,7 +7,8 @@ Bu proje, Go dilinde Fiber framework kullanılarak geliştirilmiştir. Her **mod
 ## 1. Nasıl Kurulur?
 
 ### 1.1. Gereksinimler
-- [Go 1.19+](https://go.dev/dl/)
+
+- [Go 1.22+](https://go.dev/dl/)
 - PostgreSQL (veya tercihen bir başka veritabanı)
 - (Opsiyonel) Docker ve Docker Compose
 - (Opsiyonel) Migration aracı (golang-migrate, goose vb.)
@@ -29,9 +30,9 @@ go run cmd/server/main.go
 
 ## **3. Özet**
 
-- **Her modül** (ör. `user`, `campaign`, `investment`) kendi rota dosyası (`*_routes.go`) ile kontrolü elinde tutar.  
-- **`router.go`** dosyası, tüm bu rota fonksiyonlarını (örn. `SetupUserRoutes`, `SetupCampaignRoutes`) tek bir yerden çağırarak Fiber’e kaydeder.  
-- Böylece **modülerlik** korunur, rota tanımları **dağınık** olmaz, ve ekip üyeleri **domain** bazında net bir şekilde ayrılmış kod üzerinde çalışabilir.  
+- **Her modül** (ör. `user`, `campaign`, `investment`) kendi rota dosyası (`*_routes.go`) ile kontrolü elinde tutar.
+- **`router.go`** dosyası, tüm bu rota fonksiyonlarını (örn. `SetupUserRoutes`, `SetupCampaignRoutes`) tek bir yerden çağırarak Fiber’e kaydeder.
+- Böylece **modülerlik** korunur, rota tanımları **dağınık** olmaz, ve ekip üyeleri **domain** bazında net bir şekilde ayrılmış kod üzerinde çalışabilir.
 
 
 Proje Mimarisi & Dizini
@@ -171,6 +172,15 @@ DevOps: Şefika
 Backend: Seda, Ekrem, Emin, Berat, Gülay
 Frontend: Mustafa
 Product Owner: Erdal
+(https://github.com/ekremsekmen)
+(https://github.com/beroyzr)
+(https://github.com/gulayyy)
+(https://github.com/msfcodmsf)
+(https://github.com/Sedamrtsy)
+(https://github.com/)
+(https://github.com/)
+(https://github.com/searslan1)
+(https://github.com/erdalgumuss)
 
  Lisans
 Bu proje GAMMA TEAM Lisansı altında lisanslanmıştır. Detaylar için LICENSE dosyasına göz atabilirsiniz.
@@ -240,3 +250,4 @@ backend/
  ├── go.mod
  ├── go.sum
  └── README.md
+```
