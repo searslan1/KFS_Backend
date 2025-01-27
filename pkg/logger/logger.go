@@ -1,25 +1,24 @@
 package logger
 
 import (
+	"log"
 	"os"
-
-	"github.com/sirupsen/logrus"
 )
 
-// Logger nesnesi
-var Log *logrus.Logger
+var Logger *log.Logger
 
 func InitLogger() {
-	Log = logrus.New()
-	Log.SetFormatter(&logrus.JSONFormatter{})
-	Log.SetOutput(os.Stdout)
-	Log.SetLevel(logrus.InfoLevel)
+	Logger = log.New(os.Stdout, "APP_LOG: ", log.Ldate|log.Ltime|log.Lshortfile)
 }
 
-func Info(msg string) {
-	Log.Info(msg)
+func Info(message string) {
+	Logger.Println("INFO: " + message)
 }
 
-func Error(msg string) {
-	Log.Error(msg)
+func Error(message string) {
+	Logger.Println("ERROR: " + message)
+}
+
+func Warn(message string) {
+	Logger.Println("WARN: " + message)
 }

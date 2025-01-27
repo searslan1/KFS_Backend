@@ -51,3 +51,6 @@ func LoadConfig() (*Config, error) {
 
 	return config, nil
 }
+/*config: Uygulamanın genel yapılandırmasını ve çevresel parametrelerini tutar. 
+Bu dosya genellikle global ayarları içerir, yani API anahtarları, 
+veritabanı bağlantı bilgileri ve uygulamanın genel çalışma koşullarını burada belirleyebilirsiniz.*/
