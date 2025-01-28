@@ -1,13 +1,13 @@
-package user
+package auth
 
 import "time"
 
-// User temel kullanıcı modeli
-type User struct {
-	UserID       uint      `gorm:"primaryKey;autoIncrement" json:"user_id"`       // Primary key
+// auth temel kullanıcı modeli
+type auth struct {
+	authID       uint      `gorm:"primaryKey;autoIncrement" json:"auth_id"`       // Primary key
 	Email        string    `gorm:"type:varchar(255);unique;not null" json:"email"` // Unique ve not null
 	PasswordHash string    `gorm:"type:varchar(255);not null" json:"-"`            // Şifre hashlenmiş olarak saklanır
-	UserType     string    `gorm:"type:varchar(20);not null" json:"user_type"`     // Kullanıcı türü
+	authType     string    `gorm:"type:varchar(20);not null" json:"auth_type"`     // Kullanıcı türü
 	CreatedAt    time.Time `gorm:"default:current_timestamp" json:"created_at"`    // Hesap oluşturma tarihi
 }
 
