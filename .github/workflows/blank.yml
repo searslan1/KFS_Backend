@@ -23,5 +23,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y docker-compose
 
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.22
+
+      - name: Generate go.sum file
+        run: go mod tidy
+
+      - name: Create .env file 
+        run: |
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_SSLMODE=disable" >> .env
+        shell: bash
+
+      - name: Check if .env exists  # Debugging için
+        run: cat .env
+
       - name: Run Tests
         run: docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
