@@ -31,24 +31,22 @@ jobs:
       - name: Generate go.sum file
         run: go mod tidy
 
-      - name: Check if go.sum exists
-        run: ls -la go.sum
+      - name: Run Tests
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE: disable
+        run: docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
+      
 
-      - name: Create .env file from GitHub Secrets
+      - name: Wait for Supabase Test DB
         run: |
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-          echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
-
-      - name: Wait for Database to be Ready
-        run: |
-            echo "Waiting for database to be ready..."
+            echo "Waiting for Supabase test database..."
             for i in {1..10}; do
-              nc -zv localhost 5432 && echo "Database is ready!" && exit 0
+              nc -zv ${{ secrets.DB_HOST }} 5432 && echo "Database is ready!" && exit 0
               echo "Database is not ready yet... retrying in 5s"
               sleep 5
             done
@@ -57,5 +55,3 @@ jobs:
             
       - name: Run Tests
         run: docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from test-runner
-
-        
