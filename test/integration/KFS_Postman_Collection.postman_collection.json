@@ -1,0 +1,471 @@
+{
+	"info": {
+		"_postman_id": "c14321d9-ce69-4bb3-8068-52f50a7ce0c2",
+		"name": "KFS_Postman_Collection",
+		"description": "KFS_Postman_Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38874057"
+	},
+	"item": [
+		{
+			"name": "Create User",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"securePassword123\",\n    \"user_type\": \"individual\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Register Resoponse",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "/users",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"status": "Created",
+					"code": 201,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "{\n    \"user_id\": 1,\n    \"email\": \"newuser@example.com\",\n    \"user_type\": \"individual\",\n    \"created_at\": \"2025-01-28T10:00:00Z\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"123456\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/auth/login",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Login Response",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "/auth/login",
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "{\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mocktoken\",\n    \"user\": {\n        \"user_id\": 1,\n        \"email\": \"user@example.com\",\n        \"user_type\": \"individual\"\n    }\n}"
+				}
+			]
+		},
+		{
+			"name": "Get User By İD",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users/:id",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Get User By İD Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "/users/:id",
+							"path": [
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "{\n    \"user_id\": 1,\n    \"email\": \"user@example.com\",\n    \"user_type\": \"individual\",\n    \"created_at\": \"2025-01-28T10:00:00Z\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Get All Users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Get All Users Response",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "/users",
+							"path": [
+								"users"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "[\n  {\n    \"user_id\": 1,\n    \"email\": \"user1@example.com\",\n    \"user_type\": \"individual\",\n    \"created_at\": \"2025-01-28T10:00:00Z\"\n  },\n  {\n    \"user_id\": 2,\n    \"email\": \"user2@example.com\",\n    \"user_type\": \"corporate\",\n    \"created_at\": \"2025-01-27T15:00:00Z\"\n  }\n]\n"
+				}
+			]
+		},
+		{
+			"name": "UpdateUserEmail",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"new_email@example.com\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users/:id/email",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users",
+						":id",
+						"email"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "2"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Update UserEmail Response",
+					"originalRequest": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "/users/:id/email",
+							"path": [
+								"users",
+								":id",
+								"email"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "2"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "{\n  \"message\": \"Email update requested. Please verify the new email address.\",\n  \"updated_at\": \"2025-01-28T14:00:00Z\"\n}\n"
+				}
+			]
+		},
+		{
+			"name": "UpdateUserType",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"user_type\": \"corporate\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users/:id/usertype",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users",
+						":id",
+						"usertype"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Update UserType Response",
+					"originalRequest": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "/users/:id/usertype",
+							"path": [
+								"users",
+								":id",
+								"usertype"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "{\n  \"user_id\": 1,\n  \"user_type\": \"corporate\",\n  \"updated_at\": \"2025-01-28T14:00:00Z\"\n}\n"
+				}
+			]
+		},
+		{
+			"name": "UpdateUserPassword",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"password\": \"new_secure_password123\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users/:id/password",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users",
+						":id",
+						"password"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "UpdateUserPasswordResponse",
+					"originalRequest": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "/users/:id/password",
+							"path": [
+								"users",
+								":id",
+								"password"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": "{\n  \"message\": \"Password updated successfully\",\n  \"updated_at\": \"2025-01-28T14:00:00Z\"\n}\n"
+				}
+			]
+		},
+		{
+			"name": "DeleteUser",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "https://e90c3526-2e01-4fb6-890e-32a7e2abf320.mock.pstmn.io/users/:id",
+					"protocol": "https",
+					"host": [
+						"e90c3526-2e01-4fb6-890e-32a7e2abf320",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"users",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "DeleteUserResponse",
+					"originalRequest": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "/users/:id",
+							"path": [
+								"users",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"status": "No Content",
+					"code": 204,
+					"_postman_previewlanguage": null,
+					"header": null,
+					"cookie": [],
+					"body": null
+				}
+			]
+		}
+	]
+}
