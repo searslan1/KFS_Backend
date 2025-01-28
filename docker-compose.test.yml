@@ -1,48 +1,22 @@
 services:
-  db:
-    image: postgres:15
-    container_name: test-db
-    restart: always
-    env_file:
-      - .env
-    expose:
-      - 5432
-    networks:
-      - test-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      retries: 10
-      timeout: 5s
-      start_period: 20s
-    volumes:
-      - test-db-data:/var/lib/postgresql/data
-
   test-runner:
     build:
       context: .
       dockerfile: Dockerfile
       target: tester
     container_name: test-runner
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DB_HOST: test-db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env
     networks:
       - test-net
     volumes:
       - .:/app
-    env_file:
-      - .env
-
+    command: >
+      sh -c "
+      echo 'Waiting for Supabase DB connection...';
+      /usr/local/bin/wait-for-it $DB_HOST:$DB_PORT --timeout=30 --;
+      gotestsum --format standard-verbose ./internal/... -cover -v
+      "
 networks:
   test-net:
     driver: bridge
-
-volumes:
-  test-db-data:
