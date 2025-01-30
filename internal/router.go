@@ -3,10 +3,12 @@ package internal
 import (
 	"KFS_Backend/internal/middlewares"
 	"github.com/gofiber/fiber/v2"
+	"KFS_Backend/internal/modules/auth"
+
 )
 
 // Router oluşturma
-func SetupRouter(app *fiber.App) {
+func SetupRouter1(app *fiber.App) {
 	// Middleware ekleme
 	app.Use(middlewares.RateLimiter())
 
@@ -15,5 +17,13 @@ func SetupRouter(app *fiber.App) {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
 
-	// Buraya modül bazlı rotalar eklenecek
+	authRepo := &auth.AuthRepository{DB: DB}
+	authService := &auth.AuthService{Repo: authRepo}
+	authController := &auth.AuthController{Service: authService}
+
+	app.Post("/register", authController.RegisterHandler)
+	app.Post("/login", authController.LoginHandler)
+
+	app.Post("/auth/email/send-otp", authController.SendEmailOTPHandler)
+	app.Post("/auth/phone/send-otp", authController.SendPhoneOTPHandler)
 }
