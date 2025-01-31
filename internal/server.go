@@ -5,7 +5,9 @@ import (
 	"log"
 
 	"KFS_Backend/configs"
+	"KFS_Backend/internal/modules/user"
 	"KFS_Backend/pkg/logger"
+
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -29,10 +31,7 @@ func StartServer() {
 	// Fiber başlat
 	app := fiber.New()
 
-	// Router'ı yükle
-	SetupRouter(app)
-
-	// ✅ Supabase için SSL bağlantısını ayarla
+	// ✅ Veritabanını başlat
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
 		config.Database.Host, config.Database.User, config.Database.Password,
 		config.Database.Name, config.Database.Port,
@@ -45,6 +44,14 @@ func StartServer() {
 	} else {
 		logger.Info("✅ Supabase veritabanına başarıyla bağlandı!")
 	}
+
+	// ✅ Kullanıcı Modülü İçin Repository ve Servisleri Başlat
+	userRepo := user.NewUserRepository(DB)
+	userService := user.NewUserService(userRepo)
+	userController := user.NewUserController(userService)
+
+	// ✅ Router'ı yükle (userController ile birlikte)
+	SetupRouter(app, userController)
 
 	// Sunucuyu çalıştır
 	port := ":" + config.Server.Port
