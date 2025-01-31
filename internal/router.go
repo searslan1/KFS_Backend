@@ -2,12 +2,14 @@ package internal
 
 import (
 	"KFS_Backend/internal/middlewares"
+	"KFS_Backend/internal/modules/user"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-// Router oluşturma
-func SetupRouter(app *fiber.App) {
-	// Middleware ekleme
+// SetupRouter uygulamanın tüm route'larını tanımlar
+func SetupRouter(app *fiber.App, userController *user.UserController) {
+	// Global Middleware'ler
 	app.Use(middlewares.RateLimiter())
 
 	// Sağlık kontrol endpointi
@@ -15,5 +17,8 @@ func SetupRouter(app *fiber.App) {
 		return c.JSON(fiber.Map{"status": "ok"})
 	})
 
-	// Buraya modül bazlı rotalar eklenecek
+	// Kullanıcı modülü rotaları
+	user.SetupUserRoutes(app, userController)  // 
+
+	// Diğer modülleri buraya ekleyebiliriz (örneğin kampanya, yatırım, admin)
 }
