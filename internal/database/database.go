@@ -35,9 +35,15 @@ func ConnectDatabase() {
 		config.Database.Name, config.Database.Port, sslMode,
 	)
 
+	// 📌 Hazırlanmış ifadeleri devre dışı bırak
+	pgConfig := postgres.Config{
+		DSN: dsn,
+		PreferSimpleProtocol: true, // 🔥 Hazırlanmış ifadeleri kapatıyoruz
+	}
+
 	var dbErr error
 	for i := 0; i < 3; i++ {
-		DB, dbErr = gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DB, dbErr = gorm.Open(postgres.New(pgConfig), &gorm.Config{
 			Logger: gormLogger.Default.LogMode(gormLogger.Info),
 		})
 
@@ -61,8 +67,9 @@ func ConnectDatabase() {
 		log.Fatal(err)
 	}
 
-	//RunMigrations()
+	RunMigrations()
 }
+
 
 func RunMigrations() {
 	logger.Info("🚀 Migration işlemi başlatılıyor...")
@@ -72,27 +79,39 @@ func RunMigrations() {
 		return
 	}
 
-	// 1️⃣ Önce bağımsız tablolar
-	err := DB.AutoMigrate(
-		&user.User{}, // Kullanıcı Modeli
-	)
-	if err != nil {
-		logger.Error(fmt.Sprintf("❌ User tablosu oluşturulamadı: %v", err))
-		log.Fatal(err)
+	// Ana tablolar (bağımsız olanlar)
+	mainTables := map[string]interface{}{
+		"users":              &user.User{},
+		"auth_users":         &user.AuthUser{},
+		"email_verifications": &user.EmailVerification{},
+		"user_sessions":      &user.UserSession{},
+		"campaigns":          &campaign.Campaign{},
+		"investments":        &investment.Investment{}, // Investment modeli zaten campaign_investments tablosuna bağlanıyor
 	}
 
-	// 2️⃣ Bağımlı tabloları migrate et
-	err = DB.AutoMigrate(
-		&user.AuthUser{},          // Kullanıcı Yetkilendirme
-		&user.EmailVerification{}, // E-posta doğrulama
-		&user.UserSession{},       // Kullanıcı Oturum Yönetimi
-		&campaign.Campaign{},      // Kampanya Modeli
-		&investment.Investment{},  // Yatırım Modeli
-	)
-	if err != nil {
-		logger.Error(fmt.Sprintf("❌ Diğer tablolar oluşturulamadı: %v", err))
-		log.Fatal(err)
+	// Ana tabloları kontrol et ve eksik olanları oluştur
+	for tableName, model := range mainTables {
+		var tableCount int64
+		err := DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?", tableName).Scan(&tableCount).Error
+		if err != nil {
+			logger.Error(fmt.Sprintf("❌ %s tablosu kontrol edilirken hata oluştu: %v", tableName, err))
+			log.Fatal(err)
+		}
+
+		if tableCount == 0 {
+			// Eğer tablo yoksa, oluştur
+			logger.Info(fmt.Sprintf("🔹 %s tablosu oluşturuluyor...", tableName))
+			err := DB.AutoMigrate(model)
+			if err != nil {
+				logger.Error(fmt.Sprintf("❌ %s tablosu oluşturulamadı: %v", tableName, err))
+				log.Fatal(err)
+			}
+		} else {
+			logger.Info(fmt.Sprintf("✅ %s tablosu zaten mevcut, yeniden oluşturulmayacak.", tableName))
+		}
 	}
 
 	logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
 }
+
+
