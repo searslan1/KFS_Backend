@@ -70,7 +70,6 @@ func ConnectDatabase() {
 	RunMigrations()
 }
 
-
 func RunMigrations() {
 	logger.Info("🚀 Migration işlemi başlatılıyor...")
 
@@ -79,27 +78,36 @@ func RunMigrations() {
 		return
 	}
 
-	// Ana tablolar (bağımsız olanlar)
+	// 🔥 Önce User tablosunu kontrol edip oluşturuyoruz
+	var tableExists bool
+	tableExists = DB.Migrator().HasTable(&user.User{})
+	
+	if !tableExists {
+		logger.Info("🔹 users tablosu oluşturuluyor...")
+		err := DB.AutoMigrate(&user.User{})
+		if err != nil {
+			logger.Error(fmt.Sprintf("❌ users tablosu oluşturulamadı: %v", err))
+			log.Fatal(err)
+		}
+	} else {
+		logger.Info("✅ users tablosu zaten mevcut, yeniden oluşturulmayacak.")
+	}
+	
+
+	// Diğer tabloları kontrol et
 	mainTables := map[string]interface{}{
-		"users":              &user.User{},
 		"auth_users":         &user.AuthUser{},
 		"email_verifications": &user.EmailVerification{},
 		"user_sessions":      &user.UserSession{},
 		"campaigns":          &campaign.Campaign{},
-		"investments":        &investment.Investment{}, // Investment modeli zaten campaign_investments tablosuna bağlanıyor
+		"investments":        &investment.Investment{},
 	}
 
-	// Ana tabloları kontrol et ve eksik olanları oluştur
 	for tableName, model := range mainTables {
 		var tableCount int64
-		err := DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ?", tableName).Scan(&tableCount).Error
-		if err != nil {
-			logger.Error(fmt.Sprintf("❌ %s tablosu kontrol edilirken hata oluştu: %v", tableName, err))
-			log.Fatal(err)
-		}
+		DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE LOWER(table_name) = LOWER(?)", tableName).Scan(&tableCount)
 
 		if tableCount == 0 {
-			// Eğer tablo yoksa, oluştur
 			logger.Info(fmt.Sprintf("🔹 %s tablosu oluşturuluyor...", tableName))
 			err := DB.AutoMigrate(model)
 			if err != nil {
@@ -113,5 +121,6 @@ func RunMigrations() {
 
 	logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
 }
+
 
 
