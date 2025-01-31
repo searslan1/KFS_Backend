@@ -61,7 +61,7 @@ func ConnectDatabase() {
 		log.Fatal(err)
 	}
 
-	RunMigrations()
+	//RunMigrations()
 }
 
 func RunMigrations() {
