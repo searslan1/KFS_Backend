@@ -3,15 +3,16 @@ package internal
 import (
 	"fmt"
 	"log"
-	"os"
+	//"os"
 
 	"KFS_Backend/configs"
 	"KFS_Backend/pkg/logger"
 	"KFS_Backend/internal/modules/auth"
+	"KFS_Backend/internal/database" // database paketini ekliyoruz
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"gorm.io/driver/postgres"
+	//"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"github.com/joho/godotenv"
 )
@@ -49,24 +50,14 @@ func StartServer() {
 		return c.Next()
 	})
 
-	// Veritabanı bağlantı bilgilerini oku
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"), os.Getenv("DB_PORT"), os.Getenv("DB_SSLMODE"),
-	)
+	// Veritabanını bağla
+	database.ConnectDatabase()
 
-	var dbErr error
-	DB, dbErr = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if dbErr != nil {
-		logger.Error(fmt.Sprintf("⚠️  Supabase veritabanına bağlanılamadı: %v", dbErr))
-		log.Fatal("Uygulama durduruluyor...")
-	}
-
-	// Migration
-	MigrateDatabase()
+	// Migration işlemini başlat
+	database.RunMigrations() // Burada RunMigrations fonksiyonunu çağırıyoruz
 
 	// AuthRepository ve AuthService oluştur
-	authRepo := &auth.AuthRepository{DB: DB}
+	authRepo := &auth.AuthRepository{DB: database.DB}
 	authService := &auth.AuthService{Repo: authRepo}
 	authController := &auth.AuthController{Service: authService}
 
@@ -78,14 +69,3 @@ func StartServer() {
 	logger.Info("🚀 Sunucu " + port + " portunda çalışıyor...")
 	log.Fatal(app.Listen(port))
 }
-
-// Tabloları migrate etmek için
-func MigrateDatabase() {
-	logger.Info("⚡ Veritabanı migrasyonu başlatılıyor...")
-	if err := DB.AutoMigrate(&auth.User{}, &auth.AuthUser{}); err != nil {
-		log.Fatalf("⚠️  Migration sırasında hata: %v", err)
-	} else {
-		logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
-	}
-}
-

@@ -3,15 +3,14 @@ package database
 import (
 	"fmt"
 	"log"
-	"os/user"
 	"time"
 
 	"KFS_Backend/configs"
-	"KFS_Backend/pkg/logger"
-
-	// Modülleri import et
 	"KFS_Backend/internal/modules/campaign"
 	"KFS_Backend/internal/modules/investment"
+	"KFS_Backend/internal/modules/auth"
+	"KFS_Backend/internal/utils"
+	"KFS_Backend/pkg/logger"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -26,17 +25,26 @@ func ConnectDatabase() {
 		log.Fatalf("❌ Config yüklenirken hata: %v", err)
 	}
 
-	// DSN (Data Source Name)
+	sslMode := "require"
+	if config.Database.SSLMode == "disable" {
+		sslMode = "disable"
+	}
+
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		config.Database.Host, config.Database.User, config.Database.Password,
-		config.Database.Name, config.Database.Port,
+		config.Database.Name, config.Database.Port, sslMode,
 	)
 
-	// 3 kez tekrar deneme mekanizması
+	// 📌 Hazırlanmış ifadeleri devre dışı bırak
+	pgConfig := postgres.Config{
+		DSN: dsn,
+		PreferSimpleProtocol: true, // 🔥 Hazırlanmış ifadeleri kapatıyoruz
+	}
+
 	var dbErr error
 	for i := 0; i < 3; i++ {
-		DB, dbErr = gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DB, dbErr = gorm.Open(postgres.New(pgConfig), &gorm.Config{
 			Logger: gormLogger.Default.LogMode(gormLogger.Info),
 		})
 
@@ -46,7 +54,7 @@ func ConnectDatabase() {
 		}
 
 		logger.Warn(fmt.Sprintf("⚠️  Veritabanı bağlantı hatası: %v", dbErr))
-		time.Sleep(3 * time.Second) // 3 saniye bekleyerek tekrar dene
+		time.Sleep(3 * time.Second)
 	}
 
 	if dbErr != nil {
@@ -54,30 +62,66 @@ func ConnectDatabase() {
 		log.Fatal(dbErr)
 	}
 
-	// Bağlantı Testi
-	sqlDB, _ := DB.DB()
-	if err := sqlDB.Ping(); err != nil {
+	sqlDB, err := DB.DB()
+	if err != nil || sqlDB.Ping() != nil {
 		logger.Error("⚠️  Veritabanı bağlantısı başarısız!")
 		log.Fatal(err)
 	}
 
-	// **Migration Çalıştır**
 	RunMigrations()
 }
 
 func RunMigrations() {
-	err := DB.AutoMigrate(
-		&user.User{},             // Kullanıcı Modeli
-		&campaign.Campaign{},     // Kampanya Modeli
-		&investment.Investment{}, // Yatırım Modeli
-	)
-	if err != nil {
-		logger.Error("❌ Veritabanı migrasyonu başarısız!")
-	} else {
-		logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
+	logger.Info("🚀 Migration işlemi başlatılıyor...")
+
+	if DB == nil {
+		logger.Error("❌ Veritabanı bağlantısı boş, migration işlemi iptal edildi!")
+		return
 	}
+
+	// 🔥 Önce User tablosunu kontrol edip oluşturuyoruz
+	var tableExists bool
+	tableExists = DB.Migrator().HasTable(&auth.User{})
+	
+	if !tableExists {
+		logger.Info("🔹 users tablosu oluşturuluyor...")
+		err := DB.AutoMigrate(&auth.User{})
+		if err != nil {
+			logger.Error(fmt.Sprintf("❌ users tablosu oluşturulamadı: %v", err))
+			log.Fatal(err)
+		}
+	} else {
+		logger.Info("✅ users tablosu zaten mevcut, yeniden oluşturulmayacak.")
+	}
+	
+
+	// Diğer tabloları kontrol et
+	mainTables := map[string]interface{}{
+		"auth_users":         &auth.AuthUser{},
+		// "email_verifications": &user.EmailVerification{},
+		// "user_sessions":      &user.UserSession{},
+		"campaigns":          &campaign.Campaign{},
+		"investments":        &investment.Investment{},
+		"verification_codes": &utils.Verification{},
+	}
+
+	for tableName, model := range mainTables {
+		var tableCount int64
+		DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE LOWER(table_name) = LOWER(?)", tableName).Scan(&tableCount)
+
+		if tableCount == 0 {
+			logger.Info(fmt.Sprintf("🔹 %s tablosu oluşturuluyor...", tableName))
+			err := DB.AutoMigrate(model)
+			if err != nil {
+				logger.Error(fmt.Sprintf("❌ %s tablosu oluşturulamadı: %v", tableName, err))
+				log.Fatal(err)
+			}
+		} else {
+			logger.Info(fmt.Sprintf("✅ %s tablosu zaten mevcut, yeniden oluşturulmayacak.", tableName))
+		}
+	}
+
+	logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
 }
-/*database: Veritabanı işlemleri ile ilgili tüm işlevleri yönetir. 
-Yani, veritabanı bağlantılarını açma, migrasyonları çalıştırma ve veritabanı sorguları gibi işlemleri burada yapabilirsiniz. 
-Bu dosya, veritabanı ile ilgili tüm mantığı ve işlemleri içerdiğinden dolayı, 
-uygulamanın veritabanı ile ilgili kodlarını daha modüler hale getirir.*/
+
+

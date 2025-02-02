@@ -9,10 +9,6 @@ type User struct {
 	PasswordHash string    `json:"password_hash" gorm:"not null"`                // Not Null
 	UserType     string    `json:"user_type" gorm:"type:VARCHAR(20);not null"`   // UserType VARCHAR(20)
 	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`             // Otomatik oluşturulma zamanı
-	//OTP'nin geçerlilik süresini utmak için bunu kullandım
-	OTP          string    `json:"otp" gorm:"type:VARCHAR(6)"`
-	OTPExpiresAt time.Time `json:"otp_expires_at"`
-	PhoneVerified bool     `json:"phone_verified" gorm:"default:false"`          // Telefon doğrulama
 }
 
 // AuthUser tablosu
@@ -26,4 +22,3 @@ type AuthUser struct {
 	AccountLockedUntil   time.Time `json:"account_locked_until,omitempty"`        // Opsiyonel
 	CreatedAt            time.Time `json:"created_at" gorm:"autoCreateTime"`      // Otomatik oluşturulma zamanı
 }
-//structlar ile çalıştığımız için sql yerine gorm ile çalıştım

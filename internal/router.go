@@ -24,6 +24,4 @@ func SetupRouter1(app *fiber.App) {
 	app.Post("/register", authController.RegisterHandler)
 	app.Post("/login", authController.LoginHandler)
 
-	app.Post("/auth/email/send-otp", authController.SendEmailOTPHandler)
-	app.Post("/auth/phone/send-otp", authController.SendPhoneOTPHandler)
 }
