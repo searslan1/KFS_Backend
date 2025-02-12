@@ -8,7 +8,8 @@ import (
 	"KFS_Backend/configs"
 	"KFS_Backend/internal/modules/campaign"
 	"KFS_Backend/internal/modules/investment"
-	"KFS_Backend/internal/modules/user"
+	"KFS_Backend/internal/modules/auth"
+	// "KFS_Backend/internal/utils"
 	"KFS_Backend/pkg/logger"
 
 	"gorm.io/driver/postgres"
@@ -80,11 +81,11 @@ func RunMigrations() {
 
 	// 🔥 Önce User tablosunu kontrol edip oluşturuyoruz
 	var tableExists bool
-	tableExists = DB.Migrator().HasTable(&user.User{})
+	tableExists = DB.Migrator().HasTable(&auth.User{})
 	
 	if !tableExists {
 		logger.Info("🔹 users tablosu oluşturuluyor...")
-		err := DB.AutoMigrate(&user.User{})
+		err := DB.AutoMigrate(&auth.User{})
 		if err != nil {
 			logger.Error(fmt.Sprintf("❌ users tablosu oluşturulamadı: %v", err))
 			log.Fatal(err)
@@ -96,11 +97,19 @@ func RunMigrations() {
 
 	// Diğer tabloları kontrol et
 	mainTables := map[string]interface{}{
-		"auth_users":         &user.AuthUser{},
+		"auth_users":         &auth.AuthUser{},
 		// "email_verifications": &user.EmailVerification{},
 		// "user_sessions":      &user.UserSession{},
-		"campaigns":          &campaign.Campaign{},
+		"CampaignProfile":    &campaign.CampaignProfile{},
 		"investments":        &investment.Investment{},
+		"Prize":              &campaign.Prize{},
+		"Patent":             &campaign.Patent{},
+		"Law":  			  &campaign.Law{},
+		"TeamMember":         &campaign.TeamMember{},
+		"VisualVideo":        &campaign.VisualVideo{},
+		"OtherDocument":      &campaign.OtherDocument{},
+		"Risk":               &campaign.Risk{},
+		// "verification_codes": &utils.Verification{},
 	}
 
 	for tableName, model := range mainTables {
@@ -121,6 +130,4 @@ func RunMigrations() {
 
 	logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
 }
-
-
 
