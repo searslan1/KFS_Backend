@@ -10,7 +10,7 @@ import (
 // SetupRouter uygulamanın tüm route'larını tanımlar
 func SetupRouter(app *fiber.App, userController *user.UserController) {
 	// Global Middleware'ler
-	app.Use(middlewares.RateLimiter())
+	app.Use(middlewares.RateLimitMiddleware(middlewares.RateLimitConfig{}))
 
 	// Sağlık kontrol endpointi
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -18,7 +18,7 @@ func SetupRouter(app *fiber.App, userController *user.UserController) {
 	})
 
 	// Kullanıcı modülü rotaları
-	user.SetupUserRoutes(app, userController)  // 
+	user.SetupUserRoutes(app, userController) //
 
 	// Diğer modülleri buraya ekleyebiliriz (örneğin kampanya, yatırım, admin)
 }
