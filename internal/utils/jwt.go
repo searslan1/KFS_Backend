@@ -7,24 +7,29 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
 	"KFS_Backend/configs"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt" 
 )
 
 var (
 	privateKey *rsa.PrivateKey
 	publicKey  *rsa.PublicKey
+	keysLoaded bool // Anahtarların yüklenip yüklenmediğini kontrol etmek için
 )
 
-// JWT anahtarlarını yükle
 func LoadJWTKeys() error {
+	if keysLoaded {
+		return nil // Anahtarlar zaten yüklüyse tekrar yükleme
+	}
+
 	privateKeyPEM, err := os.ReadFile("configs/jwtRS256.key")
 	if err != nil {
-		return err
+		return fmt.Errorf("özel anahtar okuma hatası: %w", err)
 	}
 	privateKeyBlock, _ := pem.Decode(privateKeyPEM)
 	if privateKeyBlock == nil {
@@ -48,33 +53,30 @@ func LoadJWTKeys() error {
 		return err
 	}
 
+	if privateKey == nil || publicKey == nil {
+		return errors.New("anahtarlar başarıyla yüklenemedi")
+	}
+
+	keysLoaded = true
 	return nil
 }
 
-// JWT token payload (SPK uyumlu)
 type JWTClaims struct {
-	UserID   uint   `json:"user_id"`
-	Email    string `json:"email"`
-	Role     string `json:"role"`
-	IP       string `json:"ip"`
-	DeviceID string `json:"device_id"`
+	UserID uint   `json:"user_id"`
+	Role   string `json:"role"`
 	jwt.StandardClaims
 }
 
-// **📌 Access Token oluşturma**
-func GenerateAccessToken(userID uint, email, role, ip, deviceID string) (string, error) {
+//Access Token oluşturma
+func GenerateAccessToken(userID uint, role string) (string, error) {
 	config := configs.LoadJWTConfig()
 
 	claims := JWTClaims{
-		UserID:   userID,
-		Email:    email,
-		Role:     role,
-		IP:       ip,
-		DeviceID: deviceID,
+		UserID: userID,
+		Role:   role,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(config.AccessTokenExp).Unix(),
 			IssuedAt:  time.Now().Unix(),
-			Subject:   base64.StdEncoding.EncodeToString([]byte(email)),
 		},
 	}
 
@@ -82,7 +84,6 @@ func GenerateAccessToken(userID uint, email, role, ip, deviceID string) (string,
 	return token.SignedString(privateKey)
 }
 
-// **📌 Refresh Token oluşturma**
 func GenerateRefreshToken(sessionID string, userID uint) (string, error) {
 	config := configs.LoadJWTConfig()
 
@@ -96,22 +97,86 @@ func GenerateRefreshToken(sessionID string, userID uint) (string, error) {
 	return token.SignedString(privateKey)
 }
 
-// **📌 Token doğrulama (RS256)**
+// ValidateToken: Gelen access token'ın imzasını ve claims bilgisini doğrular.
 func ValidateToken(tokenString string) (*JWTClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return publicKey, nil
-	})
+    // Eğer RSA anahtarları yüklenmemişse hata döndür
+    if !keysLoaded {
+        return nil, errors.New("JWT anahtarları yüklenmedi") // Anahtarların yüklenmediğini bildirir.
+    }
 
-	if err != nil || !token.Valid {
-		return nil, errors.New("geçersiz veya süresi dolmuş token")
-	}
+    // JWT parser'ı oluşturulur ve yalnızca RS256 algoritmasını geçerli kabul eder.
+    parser := &jwt.Parser{
+        ValidMethods: []string{jwt.SigningMethodRS256.Alg()}, // Sadece RS256 algoritmasını kabul et.
+    }
 
-	claims, ok := token.Claims.(*JWTClaims)
-	if !ok {
-		return nil, errors.New("token parse edilemedi")
-	}
+    // tokenString, özel claims yapısına (JWTClaims) göre parse edilip doğrulanır.
+    token, err := parser.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+        // İmza algoritmasının RSA olup olmadığını kontrol et.
+        if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+            return nil, fmt.Errorf("beklenmeyen imza algoritması: %v", token.Header["alg"])
+        }
+        return publicKey, nil // Doğrulama için publicKey döndürülür.
+    })
 
-	return claims, nil
+    // Parse sırasında hata oluşursa, hatayı wrap ederek döndür.
+    if err != nil {
+        return nil, fmt.Errorf("token doğrulama hatası: %w", err)
+    }
+
+    // Token geçerli değilse hata döndür.
+    if !token.Valid {
+        return nil, errors.New("geçersiz token")
+    }
+
+    // Token'ın claims kısmı JWTClaims tipine dönüştürülmeye çalışılır.
+    claims, ok := token.Claims.(*JWTClaims)
+    if !ok {
+        return nil, errors.New("token claims parse edilemedi")
+    }
+
+    // Doğrulanmış claims döndürülür.
+    return claims, nil
+}
+
+// ValidateRefreshToken: Gelen refresh token'ın imzasını ve standart claims bilgisini doğrular.
+func ValidateRefreshToken(tokenString string) (*jwt.StandardClaims, error) {
+    // Eğer RSA anahtarları yüklenmemişse hata döndür.
+    if !keysLoaded {
+        return nil, errors.New("JWT anahtarları yüklenmedi")
+    }
+
+    // JWT parser'ı oluşturulur, geçerli yöntem olarak RS256 kabul edilir.
+    parser := &jwt.Parser{
+        ValidMethods: []string{jwt.SigningMethodRS256.Alg()},
+    }
+
+    // tokenString, standart JWT claims yapısına (jwt.StandardClaims) göre parse edilir ve doğrulanır.
+    token, err := parser.ParseWithClaims(tokenString, &jwt.StandardClaims{}, func(token *jwt.Token) (interface{}, error) {
+        // İmza algoritmasının RSA olup olmadığını kontrol et.
+        if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+            return nil, fmt.Errorf("beklenmeyen imza algoritması: %v", token.Header["alg"])
+        }
+        return publicKey, nil // Doğrulama için publicKey döndürülür.
+    })
+
+    // Parse sırasında hata oluşursa, hatayı wrap ederek döndür.
+    if err != nil {
+        return nil, fmt.Errorf("token doğrulama hatası: %w", err)
+    }
+
+    // Token geçerli değilse hata döndür.
+    if !token.Valid {
+        return nil, errors.New("geçersiz token")
+    }
+
+    // Token'ın claims kısmı jwt.StandardClaims tipine dönüştürülmeye çalışılır.
+    claims, ok := token.Claims.(*jwt.StandardClaims)
+    if !ok {
+        return nil, errors.New("token claims parse edilemedi")
+    }
+
+    // Doğrulanmış standart claims döndürülür.
+    return claims, nil
 }
 
 // Güvenli bir Refresh Token üretir
@@ -125,79 +190,11 @@ func GenerateSecureRefreshToken() (string, error) {
 }
 
 /*
-📌 Güncellenmiş Özellikler ve Güvenlik Önlemleri
-✅ 1. RS256 (Public/Private Key) ile Şifreleme
-Önceki HS256 (Shared Secret) yerine daha güvenli olan RS256 algoritması kullanılıyor.
-Özel anahtar (jwtRS256.key) token oluşturmak için, Genel anahtar (jwtRS256.key.pub) doğrulama için kullanılıyor.
-Özel ve Genel Anahtarları oluşturma (RSA 2048 bit)
-
-✅ 2. Token İçeriği SPK Gereksinimlerine Uygun
-Kullanıcının IP ve cihaz bilgisi JWT içinde tutuluyor.
-Token içinde email, role ve user_id gibi bilgileri base64 ile encode edip güvenli hale getiriyoruz.
-Access Token kısa süreli (15 dk), Refresh Token uzun süreli (7 gün) olacak şekilde ayarlanıyor.
-✅ 3. Access Token & Refresh Token Yönetimi
-Access Token her 15 dakikada bir yenilenmeli.
-Refresh Token süresi dolana kadar yeni access token alınabilir.
-Refresh Token saklama ve doğrulama işlemi user_sessions tablosunda yapılıyor.
-✅ 4. Token İptal Mekanizması (Kara Liste)
-Token iptal edilmiş mi? kontrolünü yapmak için revoked_tokens tablosu eklenmeli.
-
-📍 Dosya: migrations/20230105_create_revoked_tokens.sql
-
-CREATE TABLE revoked_tokens (
-    token_id SERIAL PRIMARY KEY,
-    token_hash VARCHAR(255) UNIQUE NOT NULL,
-    revoked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-📍 Dosya: internal/modules/auth/auth_repository.go
-
-package auth
-
-import (
-	"crypto/sha256"
-	"encoding/hex"
-	"time"
-
-	"gorm.io/gorm"
-)
-
-type RevokedToken struct {
-	TokenHash string    `gorm:"primaryKey;unique"`
-	RevokedAt time.Time `gorm:"autoCreateTime"`
-}
-
-type AuthRepository struct {
-	db *gorm.DB
-}
-
-func NewAuthRepository(db *gorm.DB) *AuthRepository {
-	return &AuthRepository{db}
-}
-
-// Token'ı kara listeye ekle
-func (r *AuthRepository) RevokeToken(token string) error {
-	hash := sha256.Sum256([]byte(token))
-	tokenHash := hex.EncodeToString(hash[:])
-
-	revoked := RevokedToken{TokenHash: tokenHash}
-	return r.db.Create(&revoked).Error
-}
-
-// Token kara listede mi?
-func (r *AuthRepository) IsTokenRevoked(token string) bool {
-	hash := sha256.Sum256([]byte(token))
-	tokenHash := hex.EncodeToString(hash[:])
-
-	var revoked RevokedToken
-	if err := r.db.Where("token_hash = ?", tokenHash).First(&revoked).Error; err == nil {
-		return true
-	}
-	return false
-}
-Token iptal edildiğinde SHA256 hash ile saklanıyor.
-JWT doğrulama sırasında kara listeye bakılarak erişim reddediliyor.
-📌 Sonuç
-✅ JWT artık HS256 yerine RS256 kullanıyor (Güvenlik artırıldı).
-✅ Access Token 15 dakika, Refresh Token 7 gün geçerli olacak şekilde yapılandırıldı.
-✅ IP ve cihaz takibi JWT içinde yer alıyor.
-✅ Token revocation (iptal) için kara liste mekanizması eklendi.*/
+LoadJWTKeys: RSA anahtarlarını dosyalardan yükler ve doğrulama için hazır hale getirir.
+JWTClaims: Access token içerisine eklenmek üzere kullanıcıya ait bilgileri ve standart JWT alanlarını tutar.
+GenerateAccessToken: Kullanıcı bilgileri ve geçerlilik süresiyle bir access token oluşturur ve privateKey ile imzalar.
+GenerateRefreshToken: Oturum bilgilerini içeren bir refresh token oluşturur, daha uzun ömürlüdür.
+ValidateToken: Gelen token'ı RS256 algoritmasıyla doğrulayıp, özel claims yapısını parse eder.
+ValidateRefreshToken: Refresh token'ı standart JWT claims yapısı üzerinden doğrular.
+GenerateSecureRefreshToken: Rastgele güvenli bir refresh token stringi üretir.
+*/
