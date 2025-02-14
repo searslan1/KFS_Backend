@@ -44,7 +44,7 @@ func (s *UserService) LoginUser(email, password, ip, deviceID string) (string, s
 		return "", "", err
 	}
 
-	accessToken, err := utils.GenerateAccessToken(user.UserID, user.Role)
+	accessToken, err := utils.GenerateAccessToken(user.UserID, user.Email, user.Role, ip, deviceID)
 	if err != nil {
 		return "", "", err
 	}
