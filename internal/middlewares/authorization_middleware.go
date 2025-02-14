@@ -21,6 +21,7 @@ func Authorize(roles ...string) fiber.Handler {
 
 /*
 Authorization Middleware Açıklaması:
+- Fiber context'indeki kullanıcı rolünü alarak ona göre yetkilendirme kontrolü yapar.
 - Bu middleware, endpoint'lere erişimi belirli roller ile sınırlar.
 - c.Locals("role") kullanılarak, daha önce eklenmiş olan kullanıcı rolü elde edilir.
 - Parametre olarak verilen rollerden herhangi biri kullanıcı rolü ile eşleşirse, c.Next() çağrılır ve istek devam eder.
