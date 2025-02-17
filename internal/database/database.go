@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"KFS_Backend/configs"
-	"KFS_Backend/internal/modules/campaign"
-	"KFS_Backend/internal/modules/investment"
+	//"KFS_Backend/internal/modules/campaign"
+	//"KFS_Backend/internal/modules/investment"
+	
 	"KFS_Backend/internal/modules/user"
 	"KFS_Backend/pkg/logger"
-
+"KFS_Backend/internal/modules/entrepreneur"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -96,11 +97,12 @@ func RunMigrations() {
 
 	// Diğer tabloları kontrol et
 	mainTables := map[string]interface{}{
-		"auth_users":         &user.AuthUser{},
-		"email_verifications": &user.EmailVerification{},
-		"user_sessions":      &user.UserSession{},
-		"campaigns":          &campaign.Campaign{},
-		"investments":        &investment.Investment{},
+		//"auth_users":         &user.AuthUser{},
+		//"email_verifications": &user.EmailVerification{},
+		//"user_sessions":      &user.UserSession{},
+		//"campaigns":          &campaign.Campaign{},
+		//"investments":        &investment.Investment{},
+		"entrepreneur": &models.Entrepreneur{},
 	}
 
 	for tableName, model := range mainTables {
