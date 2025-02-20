@@ -35,10 +35,15 @@ func LoadJWTKeys() error {
 	if privateKeyBlock == nil {
 		return errors.New("özel anahtar çözümleme hatası")
 	}
-	privateKey, err = x509.ParsePKCS1PrivateKey(privateKeyBlock.Bytes)
+	parsedKey, err := x509.ParsePKCS8PrivateKey(privateKeyBlock.Bytes)
 	if err != nil {
 		return err
 	}
+	rsaPrivKey, ok := parsedKey.(*rsa.PrivateKey)
+	if !ok {
+		return errors.New("private key is not RSA")
+	}
+	privateKey = rsaPrivKey
 
 	publicKeyPEM, err := os.ReadFile("configs/jwtRS256.key.pub")
 	if err != nil {
@@ -48,10 +53,15 @@ func LoadJWTKeys() error {
 	if publicKeyBlock == nil {
 		return errors.New("genel anahtar çözümleme hatası")
 	}
-	publicKey, err = x509.ParsePKCS1PublicKey(publicKeyBlock.Bytes)
+	parsedPub, err := x509.ParsePKIXPublicKey(publicKeyBlock.Bytes)
 	if err != nil {
 		return err
 	}
+	rsaPubKey, ok := parsedPub.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("public key is not RSA")
+	}
+	publicKey = rsaPubKey
 
 	if privateKey == nil || publicKey == nil {
 		return errors.New("anahtarlar başarıyla yüklenemedi")
