@@ -5,6 +5,8 @@ import "github.com/gofiber/fiber/v2"
 func RegisterUserRoutes(app *fiber.App, controller *AuthController) {
 	app.Post("/users", controller.RegisterHandler)
 	app.Post("/auth/login", controller.LoginHandler)
+	//app.Post("/auth/refresh", controller.RefreshTokenHandler)
+	app.Post("/auth/logout", controller.LogoutHandler)
 	app.Get("/auth/users", controller.GetAllUsersHandler)
 	app.Get("/auth/user/:id", controller.GetUserByIDHandler)
 	app.Post("/auth/send-email-verification", controller.SendEmailVerificationHandler)

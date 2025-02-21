@@ -122,3 +122,15 @@ func (r *AuthRepository) GetAllUsers() ([]User, error) {
 	}
 	return users, nil
 }
+func (r *AuthRepository) SaveUserSession(session *UserSession) error {
+	return r.DB.Create(session).Error
+}
+
+func (r *AuthRepository) GetSessionByRefreshToken(refreshToken string) (*UserSession, error) {
+	var session UserSession
+	err := r.DB.Where("refresh_token = ?", refreshToken).First(&session).Error
+	return &session, err
+}
+func (r *AuthRepository) DeleteUserSession(sessionID string) error {
+	return r.DB.Where("session_id = ?", sessionID).Delete(&UserSession{}).Error
+}

@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"KFS_Backend/configs"
+	"KFS_Backend/internal/modules/auth"
 	"KFS_Backend/internal/modules/campaign"
 	"KFS_Backend/internal/modules/investment"
-	"KFS_Backend/internal/modules/auth"
 	"KFS_Backend/internal/utils"
 	"KFS_Backend/pkg/logger"
 
@@ -36,10 +36,9 @@ func ConnectDatabase() {
 		config.Database.Name, config.Database.Port, sslMode,
 	)
 
-	// 📌 Hazırlanmış ifadeleri devre dışı bırak
 	pgConfig := postgres.Config{
-		DSN: dsn,
-		PreferSimpleProtocol: true, // 🔥 Hazırlanmış ifadeleri kapatıyoruz
+		DSN:                  dsn,
+		PreferSimpleProtocol: true,
 	}
 
 	var dbErr error
@@ -70,6 +69,9 @@ func ConnectDatabase() {
 
 	RunMigrations()
 }
+func GetDB() *gorm.DB {
+	return DB
+}
 
 func RunMigrations() {
 	logger.Info("🚀 Migration işlemi başlatılıyor...")
@@ -79,10 +81,20 @@ func RunMigrations() {
 		return
 	}
 
-	// 🔥 Önce User tablosunu kontrol edip oluşturuyoruz
 	var tableExists bool
 	tableExists = DB.Migrator().HasTable(&auth.User{})
-	
+	if !tableExists {
+		logger.Info("🔹 auth_users tablosu oluşturuluyor...")
+		err := DB.AutoMigrate(&auth.User{})
+		if err != nil {
+			logger.Error(fmt.Sprintf("❌ auth_users tablosu oluşturulamadı: %v", err))
+			log.Fatal(err)
+		}
+	} else {
+		logger.Info("✅ auth_users tablosu zaten mevcut.")
+	}
+
+tableExists = DB.Migrator().HasTable(&auth.User{})
 	if !tableExists {
 		logger.Info("🔹 users tablosu oluşturuluyor...")
 		err := DB.AutoMigrate(&auth.User{})
@@ -91,15 +103,13 @@ func RunMigrations() {
 			log.Fatal(err)
 		}
 	} else {
-		logger.Info("✅ users tablosu zaten mevcut, yeniden oluşturulmayacak.")
+		logger.Info("✅ users tablosu zaten mevcut.")
 	}
-	
 
-	// Diğer tabloları kontrol et
 	mainTables := map[string]interface{}{
 		"auth_users":         &auth.AuthUser{},
-		// "email_verifications": &user.EmailVerification{},
-		// "user_sessions":      &user.UserSession{},
+		"email_verifications": &auth.EmailVerification{},
+		"user_sessions":      &auth.UserSession{},
 		"campaigns":          &campaign.Campaign{},
 		"investments":        &investment.Investment{},
 		"verification_codes": &utils.Verification{},
@@ -117,11 +127,9 @@ func RunMigrations() {
 				log.Fatal(err)
 			}
 		} else {
-			logger.Info(fmt.Sprintf("✅ %s tablosu zaten mevcut, yeniden oluşturulmayacak.", tableName))
+			logger.Info(fmt.Sprintf("✅ %s tablosu zaten mevcut.", tableName))
 		}
 	}
 
 	logger.Info("✅ Veritabanı migrasyonu tamamlandı!")
 }
-
-

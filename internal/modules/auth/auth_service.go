@@ -1,12 +1,13 @@
 package auth
 
 import (
+	"KFS_Backend/internal/utils"
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
-	"time"
 	"os"
-	"KFS_Backend/internal/utils"
+	"time"
+	"log"
 )
 
 type AuthService struct {
@@ -57,27 +58,53 @@ func (s *AuthService) RegisterUser(email, password, userType string) error {
 	return nil
 }
 
-// Kullanıcının e-posta ve şifresini doğrular.
-func (s *AuthService) AuthenticateUser(email, password string) (*User, error) {
+// 🔥 Kullanıcının e-posta ve şifresini doğrular ve JWT token oluşturur.
+func (s *AuthService) AuthenticateUser(email, password, ip, deviceID string) (string, string, error) {
 	// E-posta adresini şifreler.
 	encryptionKey := os.Getenv("ENCRYPTION_KEY")
 	encryptedEmail, err := utils.EncryptAES(email, encryptionKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt email: %w", err)
+		return "", "", fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
 	// Şifrelenmiş e-posta adresi ile kullanıcıyı sorgular.
 	user, err := s.Repo.GetUserByEmail(encryptedEmail)
 	if err != nil {
-		return nil, errors.New("user not found")
+		return "", "", errors.New("user not found")
 	}
 
 	// Şifre doğrulama işlemi yapar.
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return nil, errors.New("invalid password")
+		return "", "", errors.New("invalid password")
 	}
 
-	return user, nil
+	// ✅ **Access Token oluştur**
+	accessToken, err := utils.GenerateAccessToken(uint(user.UserID), user.UserType)
+	if err != nil {
+		return "", "", err
+	}
+
+	// ✅ **Refresh Token oluştur**
+	refreshToken, err := utils.GenerateSecureRefreshToken()
+	if err != nil {
+		return "", "", err
+	}
+
+	// ✅ **Kullanıcı oturumunu kaydet**
+	session := UserSession{
+		UserID:             uint(user.UserID),
+		IPAddress:          ip,
+		DeviceInfo:         deviceID,
+		RefreshToken:       refreshToken,
+		RefreshTokenExpiry: time.Now().Add(7 * 24 * time.Hour), // 7 gün geçerli
+	}
+	err = s.Repo.SaveUserSession(&session)
+	if err != nil {
+		log.Println("❌ Refresh token veritabanına kaydedilemedi:", err)
+	}
+
+	// ✅ **Access & Refresh Token'ı döndür**
+	return accessToken, refreshToken, nil
 }
 
 // Kullanıcıyı ID'ye göre getirir.
@@ -106,10 +133,10 @@ func (s *AuthService) SendEmailVerification(userID int64, email string) error {
 
 	// Doğrulama kodu kaydı oluşturur.
 	verification := &utils.Verification{
-		UserID:    userID,
-		Code:      otp,
+		UserID:     userID,
+		Code:       otp,
 		CodeExpiry: expiry,
-		Type:      "email",
+		Type:       "email",
 	}
 
 	// Doğrulama kodunu veritabanına kaydeder.
@@ -162,11 +189,46 @@ func (s *AuthService) VerifyEmailOTP(userID int64, otp string) error {
 
 	return nil
 }
+
+// ✅ Tüm kullanıcıları getir
 func (s *AuthService) GetAllUsers() ([]User, error) {
-	// Repository'deki GetAllUsers fonksiyonunu çağır
 	users, err := s.Repo.GetAllUsers()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch users: %w", err)
 	}
 	return users, nil
+}
+func (s *AuthService) RefreshAccessToken(refreshToken string) (string, string, error) {
+	session, err := s.Repo.GetSessionByRefreshToken(refreshToken)
+	if err != nil || session == nil || time.Now().After(session.RefreshTokenExpiry) {
+		return "", "", errors.New("Invalid or expired refresh token")
+	}
+
+	accessToken, err := utils.GenerateAccessToken(session.UserID, "user") // Kullanıcının rolünü DB'den çek
+	if err != nil {
+		return "", "", err
+	}
+
+	newRefreshToken, err := utils.GenerateSecureRefreshToken()
+	if err != nil {
+		return "", "", err
+	}
+
+	session.RefreshToken = newRefreshToken
+	session.RefreshTokenExpiry = time.Now().Add(7 * 24 * time.Hour)
+
+	err = s.Repo.SaveUserSession(session)
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, newRefreshToken, nil
+}
+func (s *AuthService) LogoutUser(refreshToken string) error {
+	session, err := s.Repo.GetSessionByRefreshToken(refreshToken)
+	if err != nil {
+		return err
+	}
+
+	return s.Repo.DeleteUserSession(session.SessionID)
 }

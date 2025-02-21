@@ -15,9 +15,9 @@ type AuthController struct {
 // AuthService'deki RegisterUser fonksiyonunu çağırır.
 func (c *AuthController) RegisterHandler(ctx *fiber.Ctx) error {
 	var req struct {
-		Email    string `json:"email"`    // Kullanıcının e-posta adresi.
-		Password string `json:"password"` // Kullanıcının şifresi.
-		UserType string `json:"user_type"`// Kullanıcının türü (örneğin: admin, user).
+		Email    string `json:"email"`     // Kullanıcının e-posta adresi.
+		Password string `json:"password"`  // Kullanıcının şifresi.
+		UserType string `json:"user_type"` // Kullanıcının türü (örneğin: admin, user).
 	}
 
 	// İstek gövdesini struct'a çevir.
@@ -49,14 +49,54 @@ func (c *AuthController) LoginHandler(ctx *fiber.Ctx) error {
 	}
 
 	// Kullanıcıyı doğrula.
-	user, err := c.Service.AuthenticateUser(req.Email, req.Password)
+	accessToken, refreshToken, err := c.Service.AuthenticateUser(req.Email, req.Password, ctx.IP(), ctx.Get("User-Agent"))
 	if err != nil {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	// Başarılı yanıt döner (kullanıcı bilgileri ile birlikte).
-	return ctx.JSON(user)
+	return ctx.JSON(fiber.Map{
+		"accessToken":  accessToken,
+		"refreshToken": refreshToken,
+	})
 }
+func (c *AuthController) LogoutHandler(ctx *fiber.Ctx) error {
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	err := c.Service.LogoutUser(req.RefreshToken)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.JSON(fiber.Map{"message": "User logged out successfully"})
+}
+
+func (c *AuthController) RefreshTokenHandler(ctx *fiber.Ctx) error {
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+
+	if err := ctx.BodyParser(&req); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+
+	accessToken, newRefreshToken, err := c.Service.RefreshAccessToken(req.RefreshToken)
+	if err != nil {
+		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.JSON(fiber.Map{
+		"accessToken":  accessToken,
+		"refreshToken": newRefreshToken,
+	})
+}
+
 
 // Kullanıcıyı ID'ye göre getiren handler.
 // URL parametresinden user_id alır, AuthService'ten kullanıcıyı getirir.
@@ -83,7 +123,7 @@ func (c *AuthController) GetUserByIDHandler(ctx *fiber.Ctx) error {
 func (c *AuthController) SendEmailVerificationHandler(ctx *fiber.Ctx) error {
 	var req struct {
 		UserID int64  `json:"user_id"` // Kullanıcının ID'si.
-		Email  string `json:"email"`  // Kullanıcının e-posta adresi.
+		Email  string `json:"email"`   // Kullanıcının e-posta adresi.
 	}
 
 	// İstek gövdesini struct'a çevir.
@@ -106,7 +146,7 @@ func (c *AuthController) SendEmailVerificationHandler(ctx *fiber.Ctx) error {
 func (c *AuthController) VerifyEmailHandler(ctx *fiber.Ctx) error {
 	var req struct {
 		UserID int64  `json:"user_id"` // Kullanıcının ID'si.
-		OTP    string `json:"otp"`    // Kullanıcıya gönderilen doğrulama kodu (OTP).
+		OTP    string `json:"otp"`     // Kullanıcıya gönderilen doğrulama kodu (OTP).
 	}
 
 	// İstek gövdesini struct'a çevir.

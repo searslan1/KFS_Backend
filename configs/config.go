@@ -3,7 +3,7 @@ package configs
 import (
 	"log"
 	"os"
-
+	"time"
 	"github.com/joho/godotenv"
 )
 
@@ -54,3 +54,18 @@ func LoadConfig() (*Config, error) {
 /*config: Uygulamanın genel yapılandırmasını ve çevresel parametrelerini tutar. 
 Bu dosya genellikle global ayarları içerir, yani API anahtarları, 
 veritabanı bağlantı bilgileri ve uygulamanın genel çalışma koşullarını burada belirleyebilirsiniz.*/
+
+
+type JWTConfig struct {
+    SecretKey       string
+    AccessTokenExp  time.Duration
+    RefreshTokenExp time.Duration
+}
+
+func LoadJWTConfig() JWTConfig {
+    return JWTConfig{
+        SecretKey:       os.Getenv("JWT_SECRET"),
+        AccessTokenExp:  15 * time.Minute,
+        RefreshTokenExp: 7 * 24 * time.Hour, // 7 gün
+    }
+}
