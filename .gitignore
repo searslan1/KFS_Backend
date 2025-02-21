@@ -38,3 +38,6 @@ coverage.out
 
 # Go Modül Dosyaları (Opsiyonel)
 go.sum
+
+
+config/serviceAccountKey.json
