@@ -8,13 +8,15 @@ import (
 	"KFS_Backend/configs"
 	"KFS_Backend/internal/database"
 	"KFS_Backend/internal/modules/auth"
-	"KFS_Backend/pkg/logger"
-	"KFS_Backend/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	//"gorm.io/driver/postgres"
+	"KFS_Backend/internal/modules/profile"
+	"KFS_Backend/pkg/logger"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"KFS_Backend/internal/utils"
 )
 
 // Veritabanı bağlantısı
@@ -81,6 +83,14 @@ func StartServer() {
 	} else {
 		logger.Info("✅ Supabase veritabanına başarıyla bağlandı!")
 	}
+
+
+	profileRepo := profile.NewProfileRepository(database.DB)
+    profileService := profile.NewProfileService(profileRepo)
+    profileController := profile.NewProfileController(profileService)
+
+    // Routes'ları kaydet
+    profile.RegisterProfileRoutes(app, profileController)
 
 	// Sunucuyu çalıştır
 	port := ":" + config.Server.Port

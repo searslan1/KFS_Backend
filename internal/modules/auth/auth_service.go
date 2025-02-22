@@ -44,7 +44,7 @@ func (s *AuthService) RegisterUser(email, password, userType string) error {
 
 	// AuthUser kaydını oluşturur.
 	authUser := &AuthUser{
-		UserID:        user.UserID,
+		UserID:        int64(user.UserID),
 		EmailVerified: false,
 		PhoneVerified: false,
 		CreatedAt:     time.Now(),
@@ -189,8 +189,6 @@ func (s *AuthService) VerifyEmailOTP(userID int64, otp string) error {
 
 	return nil
 }
-
-// ✅ Tüm kullanıcıları getir
 func (s *AuthService) GetAllUsers() ([]User, error) {
 	users, err := s.Repo.GetAllUsers()
 	if err != nil {

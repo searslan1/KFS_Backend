@@ -1,7 +1,7 @@
 package main
 
 import (
-	"c:/Users/gulay/OneDrive/Masaüstü/KFS/KFS_Backend/internal/db"
+	"KFS_Backend/internal/db"
 	"log"
 	
 )

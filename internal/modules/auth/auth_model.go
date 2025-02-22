@@ -1,28 +1,28 @@
 package auth
 
-import "time"
+import (
+	"time"
+)
 
-// User tablosu
 type User struct {
-	UserID       int64     `json:"user_id" gorm:"primaryKey"`                  // Primary Key ve Auto Increment
-	Email        string    `json:"email" gorm:"unique;not null"`               // Unique ve Not Null
-	PasswordHash string    `json:"password_hash" gorm:"not null"`              // Not Null
-	UserType     string    `json:"user_type" gorm:"type:VARCHAR(20);not null"` // UserType VARCHAR(20)
-	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`           // Otomatik oluşturulma zamanı
+	UserID       int64     `json:"user_id" gorm:"primaryKey"` // Primary Key ve Auto Increment
+	Email        string    `json:"email" gorm:"unique;not null"`                 // Unique ve Not Null
+	PasswordHash string    `json:"password_hash" gorm:"not null"`                // Not Null
+	UserType     string    `json:"user_type" gorm:"type:VARCHAR(20);not null"`   // UserType VARCHAR(20)
+	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`             // Otomatik oluşturulma zamanı
 }
 
 // AuthUser tablosu
 type AuthUser struct {
-	UserID               int64     `json:"user_id" gorm:"primaryKey"`              // Foreign Key ve Not Null
-	EmailVerified        bool      `json:"email_verified" gorm:"default:false"`    // Default False
-	PhoneVerified        bool      `json:"phone_verified" gorm:"default:false"`    // Default False
-	PasswordResetToken   string    `json:"password_reset_token,omitempty"`         // Opsiyonel
-	PasswordResetExpires time.Time `json:"password_reset_expires,omitempty"`       // Opsiyonel
-	FailedLoginAttempts  int       `json:"failed_login_attempts" gorm:"default:0"` // Default 0
-	AccountLockedUntil   time.Time `json:"account_locked_until,omitempty"`         // Opsiyonel
-	CreatedAt            time.Time `json:"created_at" gorm:"autoCreateTime"`       // Otomatik oluşturulma zamanı
+	UserID               int64     `json:"user_id" gorm:"primaryKey"`    // Foreign Key ve Not Null
+	EmailVerified        bool      `json:"email_verified" gorm:"default:false"`   // Default False
+	PhoneVerified        bool      `json:"phone_verified" gorm:"default:false"`   // Default False
+	PasswordResetToken   string    `json:"password_reset_token,omitempty"`        // Opsiyonel
+	PasswordResetExpires time.Time `json:"password_reset_expires,omitempty"`      // Opsiyonel
+	FailedLoginAttempts  int       `json:"failed_login_attempts" gorm:"default:0"`// Default 0
+	AccountLockedUntil   time.Time `json:"account_locked_until,omitempty"`        // Opsiyonel
+	CreatedAt            time.Time `json:"created_at" gorm:"autoCreateTime"`      // Otomatik oluşturulma zamanı
 }
-
 // E-posta Doğrulama Modeli
 type EmailVerification struct {
 	ID         uint      `gorm:"primaryKey"`
@@ -38,7 +38,7 @@ type EmailVerification struct {
 type UserSession struct {
 	SessionID          string    `gorm:"primaryKey;type:uuid;default:uuid_generate_v4()"`
 	UserID             uint      `gorm:"not null"`
-	IPAddress          string    `gorm:"type:varchar(45);not null"`
+	IPAddress          string    `gorm:"type:inet;not null"`
 	UserAgent          string    `gorm:"type:text"`
 	DeviceInfo         string    `gorm:"type:text"`
 	LoginTime          time.Time `gorm:"autoCreateTime"`

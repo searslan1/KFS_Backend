@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 	"KFS_Backend/internal/utils"
+	"time"
 )
 
 // AuthRepository, veritabanı işlemleri için kullanılan repository yapısıdır.
@@ -47,8 +48,6 @@ func (r *AuthRepository) UpdateFailedLoginAttempts(userID int64, attempts int) e
 	// Kullanıcıya ait failed_login_attempts alanını günceller.
 	return r.DB.Model(&AuthUser{}).Where("user_id = ?", userID).Update("failed_login_attempts", attempts).Error
 }
-
-// Verification tablosuna yeni bir doğrulama kodu kaydeder.
 func (r *AuthRepository) SaveVerificationCode(verification *utils.Verification) error {
 	// Veritabanına doğrulama kodu ekler.
 	err := r.DB.Create(verification).Error
@@ -96,6 +95,7 @@ func (r *AuthRepository) GetAuthUserByID(userID int64) (*AuthUser, error) {
 
 // Verification kaydını günceller.
 func (r *AuthRepository) UpdateVerificationCode(verification *utils.Verification) error {
+	verification.IsVerified = true
 	// Verilen Verification nesnesini günceller.
 	err := r.DB.Save(verification).Error
 	if err != nil {
@@ -123,14 +123,34 @@ func (r *AuthRepository) GetAllUsers() ([]User, error) {
 	return users, nil
 }
 func (r *AuthRepository) SaveUserSession(session *UserSession) error {
-	return r.DB.Create(session).Error
+	result := r.DB.Create(session)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
 
+// 📌 **Refresh Token ile oturumu getir**
 func (r *AuthRepository) GetSessionByRefreshToken(refreshToken string) (*UserSession, error) {
 	var session UserSession
-	err := r.DB.Where("refresh_token = ?", refreshToken).First(&session).Error
-	return &session, err
+	result := r.DB.Where("refresh_token = ?", refreshToken).First(&session)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Eğer refresh token süresi dolmuşsa, null döndür
+	if time.Now().After(session.RefreshTokenExpiry) {
+		return nil, errors.New("refresh token expired")
+	}
+
+	return &session, nil
 }
+
+// 📌 **Kullanıcının oturumunu (refresh token'ı) sil**
 func (r *AuthRepository) DeleteUserSession(sessionID string) error {
-	return r.DB.Where("session_id = ?", sessionID).Delete(&UserSession{}).Error
+	result := r.DB.Delete(&UserSession{}, sessionID)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }

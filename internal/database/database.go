@@ -9,9 +9,9 @@ import (
 	"KFS_Backend/internal/modules/auth"
 	"KFS_Backend/internal/modules/campaign"
 	"KFS_Backend/internal/modules/investment"
+	"KFS_Backend/internal/modules/profile"
 	"KFS_Backend/internal/utils"
 	"KFS_Backend/pkg/logger"
-
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormLogger "gorm.io/gorm/logger"
@@ -19,6 +19,7 @@ import (
 
 var DB *gorm.DB
 
+// 📌 Veritabanına bağlanma fonksiyonu
 func ConnectDatabase() {
 	config, err := configs.LoadConfig()
 	if err != nil {
@@ -38,7 +39,7 @@ func ConnectDatabase() {
 
 	pgConfig := postgres.Config{
 		DSN:                  dsn,
-		PreferSimpleProtocol: true,
+		PreferSimpleProtocol: true, // 🔥 Hazırlanmış ifadeleri kapatıyoruz
 	}
 
 	var dbErr error
@@ -69,10 +70,13 @@ func ConnectDatabase() {
 
 	RunMigrations()
 }
+
+// 📌 Veritabanı bağlantısını döndürme fonksiyonu
 func GetDB() *gorm.DB {
 	return DB
 }
 
+// 📌 Migration işlemlerini çalıştıran fonksiyon
 func RunMigrations() {
 	logger.Info("🚀 Migration işlemi başlatılıyor...")
 
@@ -81,21 +85,8 @@ func RunMigrations() {
 		return
 	}
 
-	var tableExists bool
-	tableExists = DB.Migrator().HasTable(&auth.User{})
-	if !tableExists {
-		logger.Info("🔹 auth_users tablosu oluşturuluyor...")
-		err := DB.AutoMigrate(&auth.User{})
-		if err != nil {
-			logger.Error(fmt.Sprintf("❌ auth_users tablosu oluşturulamadı: %v", err))
-			log.Fatal(err)
-		}
-	} else {
-		logger.Info("✅ auth_users tablosu zaten mevcut.")
-	}
-
-tableExists = DB.Migrator().HasTable(&auth.User{})
-	if !tableExists {
+	// 📌 İlk olarak `auth_users` tablosunu kontrol et ve oluştur
+	if !DB.Migrator().HasTable(&auth.User{}) {
 		logger.Info("🔹 users tablosu oluşturuluyor...")
 		err := DB.AutoMigrate(&auth.User{})
 		if err != nil {
@@ -106,20 +97,23 @@ tableExists = DB.Migrator().HasTable(&auth.User{})
 		logger.Info("✅ users tablosu zaten mevcut.")
 	}
 
+	// 📌 Tüm ana tabloları oluştur
 	mainTables := map[string]interface{}{
-		"auth_users":         &auth.AuthUser{},
-		"email_verifications": &auth.EmailVerification{},
-		"user_sessions":      &auth.UserSession{},
-		"campaigns":          &campaign.Campaign{},
-		"investments":        &investment.Investment{},
-		"verification_codes": &utils.Verification{},
+		"auth_users":              &auth.AuthUser{},
+		"email_verifications":     &auth.EmailVerification{},
+		"user_sessions":           &auth.UserSession{},
+		"campaigns":               &campaign.Campaign{},
+		"investments":             &investment.Investment{},
+		"verification_codes":      &utils.Verification{},
+		"profile":                 &profile.UserProfile{},
+		"address":                 &profile.Address{},
+		"role_profile":            &profile.RoleProfile{},
+		"company_representatives": &profile.CompanyRepresentative{},
+		"media_files":             &profile.MediaFile{},
 	}
 
 	for tableName, model := range mainTables {
-		var tableCount int64
-		DB.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE LOWER(table_name) = LOWER(?)", tableName).Scan(&tableCount)
-
-		if tableCount == 0 {
+		if !DB.Migrator().HasTable(model) {
 			logger.Info(fmt.Sprintf("🔹 %s tablosu oluşturuluyor...", tableName))
 			err := DB.AutoMigrate(model)
 			if err != nil {
