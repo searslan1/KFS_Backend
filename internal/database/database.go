@@ -110,6 +110,7 @@ func RunMigrations() {
 		"role_profile":            &profile.RoleProfile{},
 		"company_representatives": &profile.CompanyRepresentative{},
 		"media_files":             &profile.MediaFile{},
+		"blacklisted_tokens":      &auth.BlacklistedToken{},
 	}
 
 	for tableName, model := range mainTables {

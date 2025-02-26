@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"os"
 	"time"
-	"log"
 )
 
 type AuthService struct {
@@ -58,22 +58,20 @@ func (s *AuthService) RegisterUser(email, password, userType string) error {
 	return nil
 }
 
-// 🔥 Kullanıcının e-posta ve şifresini doğrular ve JWT token oluşturur.
-func (s *AuthService) AuthenticateUser(email, password, ip, deviceID string) (string, string, error) {
-	// E-posta adresini şifreler.
+func (s *AuthService) AuthenticateUser(email, password, ip, userAgent string) (string, string, error) {
+	// Kullanıcıyı getir
 	encryptionKey := os.Getenv("ENCRYPTION_KEY")
 	encryptedEmail, err := utils.EncryptAES(email, encryptionKey)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to encrypt email: %w", err)
 	}
 
-	// Şifrelenmiş e-posta adresi ile kullanıcıyı sorgular.
 	user, err := s.Repo.GetUserByEmail(encryptedEmail)
 	if err != nil {
 		return "", "", errors.New("user not found")
 	}
 
-	// Şifre doğrulama işlemi yapar.
+	// Şifre doğrulama işlemi
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return "", "", errors.New("invalid password")
 	}
@@ -90,11 +88,11 @@ func (s *AuthService) AuthenticateUser(email, password, ip, deviceID string) (st
 		return "", "", err
 	}
 
-	// ✅ **Kullanıcı oturumunu kaydet**
+	// ✅ **Refresh Token kaydet**
 	session := UserSession{
 		UserID:             uint(user.UserID),
 		IPAddress:          ip,
-		DeviceInfo:         deviceID,
+		DeviceInfo:         userAgent,
 		RefreshToken:       refreshToken,
 		RefreshTokenExpiry: time.Now().Add(7 * 24 * time.Hour), // 7 gün geçerli
 	}
@@ -103,7 +101,6 @@ func (s *AuthService) AuthenticateUser(email, password, ip, deviceID string) (st
 		log.Println("❌ Refresh token veritabanına kaydedilemedi:", err)
 	}
 
-	// ✅ **Access & Refresh Token'ı döndür**
 	return accessToken, refreshToken, nil
 }
 
@@ -196,37 +193,78 @@ func (s *AuthService) GetAllUsers() ([]User, error) {
 	}
 	return users, nil
 }
-func (s *AuthService) RefreshAccessToken(refreshToken string) (string, string, error) {
-	session, err := s.Repo.GetSessionByRefreshToken(refreshToken)
-	if err != nil || session == nil || time.Now().After(session.RefreshTokenExpiry) {
-		return "", "", errors.New("Invalid or expired refresh token")
-	}
+func (s *AuthService) RefreshAccessToken(refreshToken, ip, userAgent string) (string, string, error) {
+    // ✅ 1️⃣ Önce Blacklist’te olup olmadığını kontrol et
+    blacklisted, err := s.Repo.IsTokenBlacklisted(refreshToken)
+    if err != nil {
+        return "", "", fmt.Errorf("error checking blacklist: %w", err)
+    }
+    if blacklisted {
+        return "", "", errors.New("refresh token is blacklisted")
+    }
 
-	accessToken, err := utils.GenerateAccessToken(session.UserID, "user") // Kullanıcının rolünü DB'den çek
-	if err != nil {
-		return "", "", err
-	}
+    // ✅ 2️⃣ Token’a bağlı oturumu getir
+    session, err := s.Repo.GetSessionByRefreshToken(refreshToken)
+    if err != nil || session == nil || time.Now().After(session.RefreshTokenExpiry) {
+        return "", "", errors.New("invalid or expired refresh token")
+    }
 
-	newRefreshToken, err := utils.GenerateSecureRefreshToken()
-	if err != nil {
-		return "", "", err
-	}
+    // ✅ 3️⃣ IP & User-Agent doğrulama ekleyelim (User-Agent boşsa kontrol etme)
+    if session.IPAddress != ip {
+        return "", "", errors.New("token validation failed: IP mismatch")
+    }
+    if session.DeviceInfo != "" && session.DeviceInfo != userAgent {
+        return "", "", errors.New("token validation failed: device mismatch")
+    }
 
-	session.RefreshToken = newRefreshToken
-	session.RefreshTokenExpiry = time.Now().Add(7 * 24 * time.Hour)
+    // ✅ 4️⃣ Eski Refresh Token’ı Blacklist’e ekleyelim!
+    err = s.Repo.AddToBlacklist(refreshToken)
+    if err != nil {
+        return "", "", fmt.Errorf("failed to blacklist token: %w", err)
+    }
 
-	err = s.Repo.SaveUserSession(session)
-	if err != nil {
-		return "", "", err
-	}
+    // ✅ 5️⃣ Yeni Refresh Token oluştur
+    newRefreshToken, err := utils.GenerateSecureRefreshToken()
+    if err != nil {
+        return "", "", fmt.Errorf("failed to generate new refresh token: %w", err)
+    }
 
-	return accessToken, newRefreshToken, nil
+    // ✅ 6️⃣ Yeni Refresh Token’ı yeni bir session olarak kaydet (tekrar eden session_id hatasını önlemek için)
+    newSession := &UserSession{
+        UserID:             session.UserID,
+        IPAddress:          ip,
+        DeviceInfo:         userAgent,
+        RefreshToken:       newRefreshToken,
+        RefreshTokenExpiry: time.Now().Add(7 * 24 * time.Hour), // 7 gün geçerli
+    }
+
+    err = s.Repo.SaveUserSession(newSession)
+    if err != nil {
+        return "", "", fmt.Errorf("failed to save new session: %w", err)
+    }
+
+    return "newAccessToken", newRefreshToken, nil
 }
+
+
 func (s *AuthService) LogoutUser(refreshToken string) error {
+	// Refresh Token'ın veritabanında olup olmadığını kontrol et
 	session, err := s.Repo.GetSessionByRefreshToken(refreshToken)
 	if err != nil {
 		return err
 	}
 
+	// Refresh Token'ı Blacklist tablosuna ekle
+	blacklistedToken := BlacklistedToken{
+		Token:  refreshToken,
+		Expiry: session.RefreshTokenExpiry, // Token süresi dolana kadar saklanacak
+	}
+
+	err = s.Repo.AddToBlacklist(blacklistedToken.Token)
+	if err != nil {
+		return err
+	}
+
+	// Kullanıcının mevcut oturumunu veritabanından sil
 	return s.Repo.DeleteUserSession(session.SessionID)
 }

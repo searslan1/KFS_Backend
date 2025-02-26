@@ -3,6 +3,7 @@ package auth
 import (
 	"github.com/gofiber/fiber/v2"
 	"strconv"
+	"time"
 )
 
 // AuthController yapısı, AuthService'i çağırarak istekleri yöneten bir kontrolör.
@@ -36,67 +37,117 @@ func (c *AuthController) RegisterHandler(ctx *fiber.Ctx) error {
 }
 
 // Kullanıcı giriş işlemini gerçekleştiren handler.
-// E-posta ve şifre alır, AuthService ile doğrular ve kullanıcı bilgilerini döner.
 func (c *AuthController) LoginHandler(ctx *fiber.Ctx) error {
 	var req struct {
-		Email    string `json:"email"`    // Kullanıcının e-posta adresi.
-		Password string `json:"password"` // Kullanıcının şifresi.
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
-	// İstek gövdesini struct'a çevir.
 	if err := ctx.BodyParser(&req); err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	// Kullanıcıyı doğrula.
 	accessToken, refreshToken, err := c.Service.AuthenticateUser(req.Email, req.Password, ctx.IP(), ctx.Get("User-Agent"))
 	if err != nil {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	// Başarılı yanıt döner (kullanıcı bilgileri ile birlikte).
-	return ctx.JSON(fiber.Map{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Strict",
+		Expires:  time.Now().Add(time.Minute * 15),
 	})
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Strict",
+		Expires:  time.Now().Add(time.Hour * 24 * 7),
+	})
+
+	return ctx.JSON(fiber.Map{"message": "Login successful"})
 }
+
 func (c *AuthController) LogoutHandler(ctx *fiber.Ctx) error {
-	var req struct {
-		RefreshToken string `json:"refreshToken"`
+	refreshToken := ctx.Cookies("refresh_token")
+	if refreshToken == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Refresh token is required"})
 	}
 
-	if err := ctx.BodyParser(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
-	}
-
-	err := c.Service.LogoutUser(req.RefreshToken)
+	err := c.Service.LogoutUser(refreshToken)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Strict",
+		Expires:  time.Now().Add(-time.Hour),
+	})
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Strict",
+		Expires:  time.Now().Add(-time.Hour),
+	})
 
 	return ctx.JSON(fiber.Map{"message": "User logged out successfully"})
 }
 
 func (c *AuthController) RefreshTokenHandler(ctx *fiber.Ctx) error {
-	var req struct {
-		RefreshToken string `json:"refreshToken"`
+	// ✅ Refresh Token’i Cookie’den al
+	refreshToken := ctx.Cookies("refresh_token")
+	if refreshToken == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Refresh token is required"})
 	}
 
-	if err := ctx.BodyParser(&req); err != nil {
-		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	// ✅ IP ve User-Agent bilgilerini al, boş olup olmadığını kontrol et
+	ip := ctx.IP()
+	userAgent := ctx.Get("User-Agent")
+	if userAgent == "" {
+		userAgent = "Unknown-Device"
 	}
 
-	accessToken, newRefreshToken, err := c.Service.RefreshAccessToken(req.RefreshToken)
+	// ✅ Yeni Token oluşturma işlemi
+	accessToken, newRefreshToken, err := c.Service.RefreshAccessToken(refreshToken, ip, userAgent)
 	if err != nil {
 		return ctx.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	return ctx.JSON(fiber.Map{
-		"accessToken":  accessToken,
-		"refreshToken": newRefreshToken,
+	// ✅ Yeni Access Token’ı Cookie olarak ekleyelim
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax", // ✅ Çerezlerin tarayıcı tarafından engellenmemesi için "Lax"
+		Expires:  time.Now().Add(time.Minute * 15),
 	})
-}
 
+	// ✅ Yeni Refresh Token’ı Cookie olarak ekleyelim
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefreshToken,
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax", // ✅ Daha güvenli ve tarayıcı uyumluluğunu artırır
+		Expires:  time.Now().Add(time.Hour * 24 * 7),
+	})
+
+	// ✅ Yanıtı döndür
+	return ctx.JSON(fiber.Map{"message": "Token refreshed successfully"})
+}
 
 // Kullanıcıyı ID'ye göre getiren handler.
 // URL parametresinden user_id alır, AuthService'ten kullanıcıyı getirir.

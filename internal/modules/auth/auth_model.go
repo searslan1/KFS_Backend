@@ -48,3 +48,10 @@ type UserSession struct {
 	RefreshToken       string    `gorm:"type:varchar(255);uniqueIndex"`
 	RefreshTokenExpiry time.Time `gorm:"not null"`
 }
+
+type BlacklistedToken struct {
+    ID          uint      `gorm:"primaryKey"`
+    Token       string    `gorm:"unique;not null"`
+    Expiry      time.Time `gorm:"not null"`
+    CreatedAt   time.Time
+}

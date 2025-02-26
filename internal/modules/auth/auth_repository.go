@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"KFS_Backend/internal/utils"
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
-	"KFS_Backend/internal/utils"
 	"time"
 )
 
@@ -129,16 +129,22 @@ func (r *AuthRepository) SaveUserSession(session *UserSession) error {
 	}
 	return nil
 }
-
-// 📌 **Refresh Token ile oturumu getir**
 func (r *AuthRepository) GetSessionByRefreshToken(refreshToken string) (*UserSession, error) {
-	var session UserSession
-	result := r.DB.Where("refresh_token = ?", refreshToken).First(&session)
-	if result.Error != nil {
-		return nil, result.Error
+	// Önce token’ın kara listede olup olmadığını kontrol et
+	var blacklistedToken BlacklistedToken
+	err := r.DB.Where("token = ?", refreshToken).First(&blacklistedToken).Error
+	if err == nil {
+		return nil, errors.New("refresh token is blacklisted")
 	}
 
-	// Eğer refresh token süresi dolmuşsa, null döndür
+	// Eğer kara listede değilse, oturumu getir
+	var session UserSession
+	err = r.DB.Where("refresh_token = ?", refreshToken).First(&session).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// Süresi dolmuş mu kontrol et
 	if time.Now().After(session.RefreshTokenExpiry) {
 		return nil, errors.New("refresh token expired")
 	}
@@ -146,11 +152,39 @@ func (r *AuthRepository) GetSessionByRefreshToken(refreshToken string) (*UserSes
 	return &session, nil
 }
 
-// 📌 **Kullanıcının oturumunu (refresh token'ı) sil**
-func (r *AuthRepository) DeleteUserSession(sessionID string) error {
-	result := r.DB.Delete(&UserSession{}, sessionID)
+func (r *AuthRepository) RevokeRefreshToken(refreshToken string) error {
+	// Refresh Token'ı veritabanında blackliste ekle
+	result := r.DB.Exec("DELETE FROM user_sessions WHERE refresh_token = ?", refreshToken)
 	if result.Error != nil {
 		return result.Error
 	}
 	return nil
+}
+
+// 📌 **Kullanıcının oturumunu (refresh token'ı) sil**
+func (r *AuthRepository) DeleteUserSession(sessionID string) error {
+	result := r.DB.Where("session_id = ?", sessionID).Delete(&UserSession{})
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+func (r *AuthRepository) AddToBlacklist(token string) error {
+	blacklistedToken := BlacklistedToken{
+		Token:  token,
+		Expiry: time.Now().Add(7 * 24 * time.Hour), // Token süresi dolana kadar blacklist'te kalacak
+	}
+	result := r.DB.Create(&blacklistedToken)
+	return result.Error
+}
+func (r *AuthRepository) IsTokenBlacklisted(token string) (bool, error) {
+    var blacklistedToken BlacklistedToken
+    err := r.DB.Where("token = ?", token).First(&blacklistedToken).Error
+    if err == nil {
+        return true, nil // ✅ Token blacklist'te
+    }
+    if errors.Is(err, gorm.ErrRecordNotFound) {
+        return false, nil // ✅ Token kullanılabilir
+    }
+    return false, err // ✅ Hata varsa hata döndür
 }
