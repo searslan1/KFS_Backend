@@ -4,26 +4,25 @@ import (
 	"time"
 )
 
-// Kullanıcı Modeli
 type User struct {
-	UserID       uint      `gorm:"primaryKey"`
-	Email        string    `gorm:"type:varchar(255);uniqueIndex;not null"`
-	PasswordHash string    `gorm:"type:varchar(255);not null"`
-	Role         string    `gorm:"type:varchar(20);not null;check:role IN ('individual', 'corporate', 'admin', 'moderator')"`
-	Verified   	 bool      `gorm:"default:false"`
-	CreatedAt    time.Time `gorm:"autoCreateTime"`
+	UserID       int64     `json:"user_id" gorm:"primaryKey"` // Primary Key ve Auto Increment
+	Email        string    `json:"email" gorm:"unique;not null"`                 // Unique ve Not Null
+	PasswordHash string    `json:"password_hash" gorm:"not null"`                // Not Null
+	UserType     string    `json:"user_type" gorm:"type:VARCHAR(20);not null"`   // UserType VARCHAR(20)
+	CreatedAt    time.Time `json:"created_at" gorm:"autoCreateTime"`             // Otomatik oluşturulma zamanı
 }
 
-// Kullanıcı Hesap Güvenliği ve Oturum Yönetimi
+// AuthUser tablosu
 type AuthUser struct {
-	UserID             uint       `gorm:"not null;uniqueIndex"`
-	FailedAttempts     int        `gorm:"default:0"`
-	AccountLockedUntil *time.Time `gorm:"default:null"`
-	CreatedAt          time.Time  `gorm:"autoCreateTime"`
-	UpdatedAt          time.Time  `gorm:"autoUpdateTime"`
-	User               User       `gorm:"foreignKey:UserID;references:UserID;constraint:OnDelete:CASCADE"`
+	UserID               int64     `json:"user_id" gorm:"primaryKey"`    // Foreign Key ve Not Null
+	EmailVerified        bool      `json:"email_verified" gorm:"default:false"`   // Default False
+	PhoneVerified        bool      `json:"phone_verified" gorm:"default:false"`   // Default False
+	PasswordResetToken   string    `json:"password_reset_token,omitempty"`        // Opsiyonel
+	PasswordResetExpires time.Time `json:"password_reset_expires,omitempty"`      // Opsiyonel
+	FailedLoginAttempts  int       `json:"failed_login_attempts" gorm:"default:0"`// Default 0
+	AccountLockedUntil   time.Time `json:"account_locked_until,omitempty"`        // Opsiyonel
+	CreatedAt            time.Time `json:"created_at" gorm:"autoCreateTime"`      // Otomatik oluşturulma zamanı
 }
-
 // E-posta Doğrulama Modeli
 type EmailVerification struct {
 	ID         uint      `gorm:"primaryKey"`
@@ -48,4 +47,11 @@ type UserSession struct {
 	LastActivity       time.Time `gorm:"autoCreateTime;autoUpdateTime"`
 	RefreshToken       string    `gorm:"type:varchar(255);uniqueIndex"`
 	RefreshTokenExpiry time.Time `gorm:"not null"`
+}
+
+type BlacklistedToken struct {
+    ID          uint      `gorm:"primaryKey"`
+    Token       string    `gorm:"unique;not null"`
+    Expiry      time.Time `gorm:"not null"`
+    CreatedAt   time.Time
 }

@@ -19,7 +19,7 @@ func AuthMiddleware() fiber.Handler {
 
 		db := database.DB
 		var blacklistedToken user.BlacklistedToken
-		if err := db.Where("token = ?", tokenString).First(&blacklistedToken).Error; err == nil {
+		if err := db.Where("Token = ?", tokenString).First(&blacklistedToken).Error; err == nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Token blackliste alınmış"})
 		}
 
