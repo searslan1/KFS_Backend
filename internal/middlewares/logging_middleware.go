@@ -1,67 +1,95 @@
 package middlewares
 
 import (
-    "time"
+	"strconv"
+	"time"
 
-    "KFS_Backend/internal/utils"
+	"KFS_Backend/internal/utils"
 
-    "github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2"
 )
 
-func LoggingMiddleware(c *fiber.Ctx) error {
-    // İsteğin başlangıç zamanını kaydet, bu süre isteğin işleme süresini hesaplamak için kullanılacak.
-    start := time.Now()
+// LoggingMiddleware, istek ve yanıt detaylarını loglayan middleware
+func LoggingMiddleware() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// İsteğin başlangıç zamanını kaydet
+		start := time.Now()
 
-    // Request bilgilerini topla:
-    // İstek gövdesi (body) string olarak alınıyor.
-    reqBody := string(c.Body())
-    // Client'ın User-Agent başlığı alınıyor.
-    userAgent := c.Get("User-Agent")
+		// Request ID'yi al
+		rid, ok := c.Locals("requestID").(string)
+		if !ok {
+			rid = "unknown"
+		}
 
-    // AuthMiddleware tarafından önceden context'e eklenmiş olan "userID" ve "role" bilgilerini çek.
-    // Eğer bilgiler bulunamazsa, boş değer ile çalışmaya devam eder.
-    userID, _ := c.Locals("userID").(string)
-    userRole, _ := c.Locals("role").(string)
+		// Kullanıcı bilgilerini al
+		userID, _ := c.Locals("userID").(int64)
+		userRole, _ := c.Locals("role").(string)
 
-    // İstek işleniyor; c.Next() ile zincirdeki bir sonraki middleware veya handler'a geçiliyor.
-    err := c.Next()
+		// İstek detaylarını logla
+		utils.Log.Info().
+			Str("request_id", rid).
+			Int64("user_id", userID).
+			Str("role", userRole).
+			Str("method", c.Method()).
+			Str("path", c.Path()).
+			Str("ip", c.IP()).
+			Str("user_agent", c.Get("User-Agent")).
+			Msg("İstek başladı")
 
-    // İstek işlendikten sonra yanıt bilgileri toplanıyor:
-    // İşlemin süresi hesaplanıyor.
-    duration := time.Since(start)
-    // Yanıtın HTTP durum kodu alınıyor.
-    statusCode := c.Response().StatusCode()
-    // Yanıt boyutu (byte cinsinden) hesaplanıyor.
-    respSize := len(c.Response().Body())
+		// Sonraki middleware'e geç
+		err := c.Next()
 
-    // Toplanan tüm bilgileri içeren RequestLog yapısı oluşturuluyor
-    // ve utils.LogRequest fonksiyonu ile loglama işlemi yapılıyor.
-    utils.LogRequest(utils.RequestLog{
-        Method:     c.Method(),    // HTTP metodu (GET, POST, vs.)
-        Path:       c.Path(),      // İstek yapılan URL path
-        IP:         c.IP(),        // İstemci IP adresi
-        Duration:   duration,      // İstek işlenme süresi
-        StatusCode: statusCode,    // Yanıtın durum kodu
-        UserAgent:  userAgent,     // İstemcinin User-Agent bilgisi
-        ReqBody:    reqBody,       // İstek gövdesi
-        RespSize:   respSize,      // Yanıt boyutu (byte cinsinden)
-        Error:      err,           // İşlem sırasında meydana gelen hata (varsa)
-        UserID:     userID,        // İstemciye ait kullanıcı ID'si
-        Role:       userRole,      // İstemcinin rolü
-    })
+		// İstek tamamlandıktan sonra bilgileri topla
+		duration := time.Since(start)
+		statusCode := c.Response().StatusCode()
+		respSize := len(c.Response().Body())
 
-    // Eğer işleme sırasında bir hata oluştuysa, bu hata sonraki middleware ya da handler'a iletiliyor.
-    return err
+		// Yanıt detaylarını logla
+		logEvent := utils.Log.Info()
+		if err != nil || statusCode >= 400 {
+			logEvent = utils.Log.Error().Err(err)
+		}
+
+		logEvent.
+			Str("request_id", rid).
+			Int64("user_id", userID).
+			Str("role", userRole).
+			Str("method", c.Method()).
+			Str("path", c.Path()).
+			Int("status", statusCode).
+			Dur("duration", duration).
+			Int("req_size", len(c.Body())).
+			Int("resp_size", respSize).
+			Str("ip", c.IP()).
+			Str("user_agent", c.Get("User-Agent")).
+			Msg("İstek tamamlandı")
+
+		// Log yap
+		utils.LogRequest(utils.RequestLog{
+			Method:      c.Method(),
+			Path:        c.Path(),
+			IP:          c.IP(),
+			Duration:    duration,
+			StatusCode:  statusCode,
+			UserAgent:   c.Get("User-Agent"),
+			ReqBodySize: len(c.Body()),
+			RespSize:    respSize,
+			Error:       err,
+			UserID:      strconv.FormatInt(userID, 10), // int64'ü string'e çevir
+			Role:        userRole,
+		})
+
+		return err
+	}
 }
 
 /*
 LoggingMiddleware Açıklaması:
 - Bu middleware, gelen HTTP isteklerinin detaylı loglarını toplar.
-- İstek başladığında zaman damgası alınır; istek gövdesi, User-Agent, IP, URL path gibi bilgiler toplanır.
-- AuthMiddleware tarafından daha önce eklenmiş olan kullanıcı kimlik bilgileri (userID, role) de burada elde edilir.
-- c.Next() ile zincirdeki sonraki middleware veya handler çalıştırıldıktan sonra, istek işlenme süresi, yanıtın durum kodu ve yanıt boyutu hesaplanır.
-- Tüm bu veriler, utils.LogRequest fonksiyonu aracılığıyla loglanır.
+- İstek gövdesi içeriğini loglamaz, sadece boyutunu kaydeder - bu güvenlik ve gizlilik için daha uygundur.
+- Kullanıcı kimlik bilgilerini (ID, rol), yanıt bilgilerini ve performans ölçümlerini loglar.
+- Zerolog ile yüksek performanslı loglama sağlar.
+
 Kullanım:
-- Fiber uygulamanızda, bu middleware'i global olarak ekleyebilirsiniz; örneğin main.go dosyanızda app.Use(LoggingMiddleware) şeklinde.
-- Böylece, uygulamaya gelen her istek için detaylı log kayıtları oluşturulur ve sistem izlenebilir hale gelir.
+- app.Use(LoggingMiddleware())
 */
