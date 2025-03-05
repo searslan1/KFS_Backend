@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
+
 func RequestIDMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Eğer istemci request ID göndermişse onu kullan
@@ -22,3 +23,10 @@ func RequestIDMiddleware() fiber.Handler {
 		return c.Next()
 	}
 }
+
+// RequestIDMiddleware, her HTTP isteği için benzersiz bir tanımlayıcı (request ID) oluşturan ve yöneten middleware fonksiyonudur.
+// Bu middleware şunları yapar:
+// - Gelen istekte X-Request-ID header'ı varsa, bu değeri kullanır
+// - Yoksa, yeni bir UUID oluşturur
+// - Request ID'yi context içinde saklar ve response header'ına ekler
+// - Bu sayede her isteğin takibi ve loglama işlemleri daha kolay hale gelir

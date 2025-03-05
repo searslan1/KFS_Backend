@@ -2,6 +2,7 @@ package middlewares
 
 import "github.com/gofiber/fiber/v2"
 
+
 func SecurityHeadersMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// XSS koruması
@@ -22,3 +23,13 @@ func SecurityHeadersMiddleware() fiber.Handler {
 		return c.Next()
 	}
 }
+
+// SecurityHeadersMiddleware, HTTP güvenlik başlıklarını ayarlayan bir middleware fonksiyonudur.
+// Bu middleware aşağıdaki güvenlik önlemlerini sağlar:
+// - XSS (Cross-Site Scripting) saldırılarına karşı koruma
+// - Clickjacking saldırılarına karşı koruma (frame kullanımını engeller)
+// - MIME type sniffing saldırılarına karşı koruma
+// - Referrer bilgisinin kontrolü
+// - Content Security Policy ile kaynak kullanımı kısıtlaması
+// - HSTS ile HTTPS zorunluluğu
+// - Browser cache kontrolü

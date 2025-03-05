@@ -1,14 +1,13 @@
 package middlewares
 
 import (
-	"runtime/debug"
-
 	"KFS_Backend/internal/utils"
+	"runtime/debug"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// RecoveryMiddleware, panic durumlarını yakalayıp işleyerek uygulamanın çökmesini engeller
+
 func RecoveryMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// recover fonksiyonunu defer ile çağırarak panic durumunu yakalıyoruz
@@ -44,9 +43,21 @@ func RecoveryMiddleware() fiber.Handler {
 	}
 }
 
+
+// RecoveryMiddleware, uygulamadaki panic durumlarını güvenli bir şekilde yöneten bir middleware'dir.
+// Bu middleware şu işlevleri yerine getirir:
+// - Uygulama içinde oluşabilecek tüm panic durumlarını yakalar
+// - Panic durumunda stack trace bilgisini kaydeder
+// - Hata detaylarını yapılandırılmış log sistemi ile loglar
+// - Kullanıcıya dostu bir hata mesajı döner
+// - Uygulamanın çökmesini engelleyerek servis sürekliliğini sağlar
+//
+// Önemli Not: Bu middleware her zaman diğer middleware'lerden önce tanımlanmalıdır
+// çünkü ancak bu şekilde diğer middleware'lerdeki panic'leri yakalayabilir.
+
 /*
 RecoveryMiddleware Kullanımı:
-- Bu middleware'i her zaman ilk sırada eklemek önemlidir.
+- Bu middleware her zaman ilk sırada eklenmelidir.
 - Böylece diğer middleware'lerde veya rota işleyicilerinde oluşabilecek panic'leri yakalayabilir.
 
 app := fiber.New()

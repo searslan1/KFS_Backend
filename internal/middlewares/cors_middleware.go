@@ -8,6 +8,19 @@ var allowedDomains = []string{
 	"https://sub.example.com",
 }
 
+// CorsMiddleware, Cross-Origin Resource Sharing (CORS) politikalarını yöneten bir middleware fonksiyonudur.
+// Bu middleware şunları yapar:
+// - Önceden tanımlanmış güvenli domainlerden gelen isteklere izin verir
+// - İzin verilen HTTP metodlarını (GET,POST,PUT,DELETE,OPTIONS) belirler
+// - İzin verilen HTTP başlıklarını tanımlar
+// - Credentials (kimlik bilgileri) kullanımına izin verir
+// - OPTIONS isteklerini (preflight requests) uygun şekilde yanıtlar
+// - İzinsiz domainlerden gelen istekleri güvenli bir şekilde reddeder
+//
+// Not: Bu middleware, frontend uygulamanızın API'ye güvenli bir şekilde erişebilmesini sağlar.
+// Frontend ve backend farklı domainlerde çalıştığında, tarayıcı güvenlik nedeniyle istekleri
+// engeller. Bu middleware, güvenilir frontend domainlerinden gelen isteklere izin vererek
+// bu sorunu çözer.
 func CorsMiddleware() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		origin := c.Get("Origin")
