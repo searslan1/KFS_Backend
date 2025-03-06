@@ -1,17 +1,16 @@
 package campaign
 
 import (
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 // RegisterRoutes, campaign modülüne ait tüm HTTP route'larını tanımlar.
-// Bu fonksiyonu, ana router'ınızda çağırarak campaign modülü endpoint'lerini sisteme ekleyebilirsiniz.
-func RegisterRoutes(router *gin.Engine, controller *Controller) {
-	campaignRoutes := router.Group("/campaigns")
+func RegisterRoutes(app *fiber.App, controller *Controller) {
+	campaignRoutes := app.Group("/campaigns")
 	{
-		campaignRoutes.POST("/", controller.CreateCampaign)   // Yeni kampanya oluşturur
-		campaignRoutes.GET("/:id", controller.GetCampaignByID)  // Belirtilen ID'ye sahip kampanyayı getirir
-		campaignRoutes.PUT("/:id", controller.UpdateCampaign)   // Kampanya güncelleme işlemi
-		campaignRoutes.DELETE("/:id", controller.DeleteCampaign) // Kampanya silme işlemi
+		campaignRoutes.Post("/", controller.CreateCampaign)
+		campaignRoutes.Get("/:id", controller.GetCampaignByID)
+		campaignRoutes.Put("/:id", controller.UpdateCampaign)
+		campaignRoutes.Delete("/:id", controller.DeleteCampaign)
 	}
 }

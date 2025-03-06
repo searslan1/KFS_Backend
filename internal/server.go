@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"KFS_Backend/configs"
-	// "KFS_Backend/internal/modules/user"
+	"KFS_Backend/internal/modules/campaign"
 	"KFS_Backend/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
@@ -31,27 +31,37 @@ func StartServer() {
 	// Fiber başlat
 	app := fiber.New()
 
-	// ✅ Veritabanını başlat
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=require",
-		config.Database.Host, config.Database.User, config.Database.Password,
-		config.Database.Name, config.Database.Port,
+	// Veritabanı bağlantısı için DSN oluştur
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
+		config.Database.Host,
+		config.Database.User,
+		config.Database.Password,
+		config.Database.Name,
+		config.Database.Port,
+		config.Database.SSLMode,
 	)
 
 	var dbErr error
 	DB, dbErr = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if dbErr != nil {
-		logger.Error(fmt.Sprintf("⚠️  Supabase veritabanına bağlanılamadı: %v", dbErr))
+		logger.Error(fmt.Sprintf("⚠️  Veritabanına bağlanılamadı: %v", dbErr))
 	} else {
-		logger.Info("✅ Supabase veritabanına başarıyla bağlandı!")
+		logger.Info("✅ Veritabanına başarıyla bağlanıldı!")
 	}
 
-	// ✅ Kullanıcı Modülü İçin Repository ve Servisleri Başlat
-	// userRepo := user.NewUserRepository(DB)
-	// userService := user.NewUserService(userRepo)
-	// userController := user.NewUserController(userService)
+	// Sağlık kontrol endpoint'i
+	app.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "ok"})
+	})
 
-	// ✅ Router'ı yükle (userController ile birlikte)
-	// SetupRouter(app, userController)
+	// Kampanya modülü bileşenlerini oluştur
+	campaignRepo := campaign.NewRepository(DB)
+	campaignService := campaign.NewService(campaignRepo)
+	campaignController := campaign.NewController(campaignService)
+
+	// Kampanya rotalarını kaydet
+	campaign.RegisterRoutes(app, campaignController)
 
 	// Sunucuyu çalıştır
 	port := ":" + config.Server.Port

@@ -12,10 +12,9 @@ type Repository interface {
 	GetCampaignProfileByID(id uint) (*CampaignProfile, error)
 	UpdateCampaignProfile(campaign *CampaignProfile) error
 	DeleteCampaignProfile(id uint) error
-	// Diğer ihtiyaç duyulan metotlar eklenebilir.
 }
 
-// repository struct'ı, GORM DB nesnesini içerir.
+// repository yapısı, GORM DB nesnesini içerir.
 type repository struct {
 	db *gorm.DB
 }
@@ -47,7 +46,7 @@ func (r *repository) GetCampaignProfileByID(id uint) (*CampaignProfile, error) {
 		Preload("OtherDocuments").
 		First(&campaign, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil // İstenilen kayıt bulunamadıysa nil dönebilirsiniz.
+			return nil, nil // Kayıt bulunamazsa nil döndür.
 		}
 		return nil, err
 	}

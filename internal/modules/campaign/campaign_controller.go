@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 // Controller, campaign modülü için HTTP isteklerini işleyen yapıdır.
@@ -18,70 +18,61 @@ func NewController(service Service) *Controller {
 }
 
 // CreateCampaign, POST /campaigns endpoint'ini işleyerek yeni kampanya oluşturur.
-func (c *Controller) CreateCampaign(ctx *gin.Context) {
+func (c *Controller) CreateCampaign(ctx *fiber.Ctx) error {
 	var campaign CampaignProfile
-	if err := ctx.ShouldBindJSON(&campaign); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if err := ctx.BodyParser(&campaign); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	if err := c.service.CreateCampaign(&campaign); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-	ctx.JSON(http.StatusCreated, campaign)
+	return ctx.Status(http.StatusCreated).JSON(campaign)
 }
 
 // GetCampaignByID, GET /campaigns/:id endpoint'iyle belirli bir kampanyayı getirir.
-func (c *Controller) GetCampaignByID(ctx *gin.Context) {
-	idParam := ctx.Param("id")
+func (c *Controller) GetCampaignByID(ctx *fiber.Ctx) error {
+	idParam := ctx.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid campaign ID"})
-		return
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid campaign ID"})
 	}
 	campaign, err := c.service.GetCampaignByID(uint(id))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		return
+		return ctx.Status(http.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
 	}
-	ctx.JSON(http.StatusOK, campaign)
+	return ctx.Status(http.StatusOK).JSON(campaign)
 }
 
 // UpdateCampaign, PUT /campaigns/:id endpoint'iyle kampanya verilerini günceller.
-func (c *Controller) UpdateCampaign(ctx *gin.Context) {
-	idParam := ctx.Param("id")
+func (c *Controller) UpdateCampaign(ctx *fiber.Ctx) error {
+	idParam := ctx.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid campaign ID"})
-		return
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid campaign ID"})
 	}
 
 	var campaign CampaignProfile
-	if err := ctx.ShouldBindJSON(&campaign); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if err := ctx.BodyParser(&campaign); err != nil {
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	campaign.ID = uint(id)
 
 	if err := c.service.UpdateCampaign(&campaign); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-	ctx.JSON(http.StatusOK, campaign)
+	return ctx.Status(http.StatusOK).JSON(campaign)
 }
 
 // DeleteCampaign, DELETE /campaigns/:id endpoint'iyle kampanyayı siler.
-func (c *Controller) DeleteCampaign(ctx *gin.Context) {
-	idParam := ctx.Param("id")
+func (c *Controller) DeleteCampaign(ctx *fiber.Ctx) error {
+	idParam := ctx.Params("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid campaign ID"})
-		return
+		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid campaign ID"})
 	}
 
 	if err := c.service.DeleteCampaign(uint(id)); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Campaign deleted successfully"})
+	return ctx.Status(http.StatusOK).JSON(fiber.Map{"message": "Campaign deleted successfully"})
 }
